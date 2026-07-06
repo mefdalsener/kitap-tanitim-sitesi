@@ -56,6 +56,8 @@
 	var sayfaMaxDeger = tumSayfaSayilari.Any() ? ((tumSayfaSayilari.Max() / 10) + 1) * 10 : 2000;
 
 	var kitapVerileriJson = System.Text.Json.JsonSerializer.Serialize(kitapVerileri);
+	var kitapVerileriMap = kitapVerileri.ToDictionary(k => k.id);
+
 }
 
 <!DOCTYPE html>
@@ -959,10 +961,8 @@
 			<main class="book-grid" id="book-grid">
 				@foreach (var kitap in siraliKitaplar)
 				{
-					var bookData = kitapVerileri.First(k => k.id.Equals(kitap.BookID));
-					var bookJson = System.Text.Json.JsonSerializer.Serialize(bookData);
-
-					<div class="book-card" data-book="@bookJson" onclick="popupAc(JSON.parse(this.dataset.book))" style="cursor: pointer;">
+					var veri = kitapVerileriMap[kitap.BookID];
+					<div class="book-card" onclick="popupAc(kitapMap[@kitap.BookID])" style="cursor:pointer;">
 						<div class="book-cover">
 							@if (!string.IsNullOrEmpty(kitap.BookCoverImage_URL))
 							{
@@ -971,12 +971,8 @@
 						</div>
 						<div class="book-information">
 							<p class="book-title">@kitap.BookName</p>
-							<p class="book-author">
-								@string.Join(", ", kitap.BookAuthors.Select(ba => ba.Author.AuthorName + " " + ba.Author.AuthorSurname))
-							</p>
-							<p class="book-publisher">
-								@string.Join(", ", kitap.BookPublishers.Select(bp => bp.Publisher.PublisherName))
-							</p>
+							<p class="book-author">@veri.yazar</p>
+							<p class="book-publisher">@veri.yayinevi</p>
 						</div>
 					</div>
 				}
@@ -1072,6 +1068,8 @@
 		const tumKitaplar = JSON.parse(
 		document.getElementById("tum-kitaplar-data").textContent,
 		);
+		const kitapMap = {};
+		tumKitaplar.forEach((k) => (kitapMap[k.id] = k));
 
 		btnKitaplar.addEventListener("click", () => {
 		viewKitaplar.classList.add("active");

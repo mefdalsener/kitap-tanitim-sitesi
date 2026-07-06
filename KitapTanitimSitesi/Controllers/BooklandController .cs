@@ -18,14 +18,11 @@ namespace KitapTanitimSitesi.Controllers
             var viewModel = new BooklandViewModel
             {
                 Books = await _context.Books
-                    .Include(b => b.BookAuthors)
-                        .ThenInclude(ba => ba.Author)
-                    .Include(b => b.BookGenres)
-                        .ThenInclude(bg => bg.Genre)
-                    .Include(b => b.BookPublishers)
-                        .ThenInclude(bp => bp.Publisher)
-                    .Include(b => b.BookTranslators)
-                        .ThenInclude(bt => bt.Translator)
+                    .Include(b => b.BookAuthors).ThenInclude(ba => ba.Author)
+                    .Include(b => b.BookGenres).ThenInclude(bg => bg.Genre)
+                    .Include(b => b.BookPublishers).ThenInclude(bp => bp.Publisher)
+                    .Include(b => b.BookTranslators).ThenInclude(bt => bt.Translator)
+                    .AsSplitQuery()
                     .ToListAsync(),
 
                 Authors = await _context.Authors
