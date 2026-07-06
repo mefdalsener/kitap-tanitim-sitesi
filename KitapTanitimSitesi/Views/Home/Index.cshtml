@@ -1,0 +1,19 @@
+﻿@{
+    ViewData["Title"] = "Anasayfa";
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+    <main class="welcome-screen">
+        <h1>Hoşgeldiniz</h1>
+        <h2>KitapTanıtımSitesi</h2>
+        <a href="@Url.Action("Index", "Bookland")" class="btn-giris">Siteye Gir</a>
+    </main>
+</body>
+</html>
