@@ -441,7 +441,7 @@
 				}
 
 				/* Arama kutusuyla eşleşmeyen ya da mevcut filtre kombinasyonunda
-																											   hiçbir kitap döndürmeyecek seçenekler tamamen gizlenir. */
+																														   hiçbir kitap döndürmeyecek seçenekler tamamen gizlenir. */
 				.filter-option.arama-gizli,
 				.filter-option.gecersiz {
 					display: none !important;
@@ -593,7 +593,7 @@
 			.author-card {
 				padding: 12px;
 				display: flex;
-				flex-direction: row; 
+				flex-direction: row;
 				align-items: center;
 				gap: 12px;
 				height: 100px;
@@ -662,9 +662,9 @@
 			}
 
 			/* === POPUP (ORTAK) ===
-							 Hem kitap popup'ı hem de yazar popup'ı bu paylaşılan sınıfları kullanır.
-							 Element ID'leri sadece JS tarafında hangi popup'ın açılıp kapandığını
-							 ayırt etmek için tutuluyor; görsel stiller tamamen ortak. */
+										 Hem kitap popup'ı hem de yazar popup'ı bu paylaşılan sınıfları kullanır.
+										 Element ID'leri sadece JS tarafında hangi popup'ın açılıp kapandığını
+										 ayırt etmek için tutuluyor; görsel stiller tamamen ortak. */
 			.popup-overlay {
 				display: none;
 				position: fixed;
@@ -712,7 +712,7 @@
 					color: #26313D;
 				}
 			/* Çarpının solundaki "Düzenle" butonu: aktif kitabı admin paneline
-																											güncelleme modunda gönderir. */
+																														güncelleme modunda gönderir. */
 			.popup-duzenle {
 				position: absolute;
 				top: 10px;
@@ -993,7 +993,7 @@
 
 		<div class="search-area">
 			<input type="text" id="kitap-arama-input" class="search-input"
-				   placeholder="🔍 Kitap ara..." oninput="kitapAramaFiltrele()" />
+				   placeholder="🔍 Kitap ara..." oninput="kitapAramaGirisDegisti(this.value)" onchange="kitapAramaDurumunuURLyeYaz(this.value)" />
 		</div>
 
 		<div class="auth-buttons">
@@ -1027,7 +1027,7 @@
 								@foreach (var author in Model.Authors.Where(a => kullanilanYazarIdleri.Contains(a.AuthorID)))
 								{
 									<label class="filter-option">
-										<input type="checkbox" value="@author.AuthorID" onchange="filtreUygula()" />
+										<input type="checkbox" value="@author.AuthorID" onchange="filtreDegisti()" />
 										@author.AuthorName @author.AuthorSurname
 									</label>
 								}
@@ -1047,7 +1047,7 @@
 								@foreach (var publisher in Model.Publishers.Where(p => kullanilanYayineviIdleri.Contains(p.PublisherID)))
 								{
 									<label class="filter-option">
-										<input type="checkbox" value="@publisher.PublisherID" onchange="filtreUygula()" />
+										<input type="checkbox" value="@publisher.PublisherID" onchange="filtreDegisti()" />
 										@publisher.PublisherName
 									</label>
 								}
@@ -1067,7 +1067,7 @@
 								@foreach (var translator in Model.Translators.Where(t => kullanilanCevirmenIdleri.Contains(t.TranslatorID)))
 								{
 									<label class="filter-option">
-										<input type="checkbox" value="@translator.TranslatorID" onchange="filtreUygula()" />
+										<input type="checkbox" value="@translator.TranslatorID" onchange="filtreDegisti()" />
 										@translator.TranslatorName @translator.TranslatorSurname
 									</label>
 								}
@@ -1087,7 +1087,7 @@
 								@foreach (var seri in Model.SeriesList.Where(s => kullanilanSeriIdleri.Contains(s.SeriesID)))
 								{
 									<label class="filter-option">
-										<input type="checkbox" value="@seri.SeriesID" onchange="filtreUygula()" />
+										<input type="checkbox" value="@seri.SeriesID" onchange="filtreDegisti()" />
 										@seri.SeriesName
 									</label>
 								}
@@ -1107,7 +1107,7 @@
 								@foreach (var tur in Model.Genres.Where(g => kullanilanTurIdleri.Contains(g.GenreID)))
 								{
 									<label class="filter-option">
-										<input type="checkbox" value="@tur.GenreID" onchange="filtreUygula()" />
+										<input type="checkbox" value="@tur.GenreID" onchange="filtreDegisti()" />
 										@tur.GenreName
 									</label>
 								}
@@ -1127,8 +1127,8 @@
 								<span id="range-max-label">@sayfaMaxDeger</span>
 							</div>
 							<div class="range-container">
-								<input type="range" id="range-min" min="@sayfaMinDeger" max="@sayfaMaxDeger" value="@sayfaMinDeger" step="10" oninput="rangeGuncelle()" />
-								<input type="range" id="range-max" min="@sayfaMinDeger" max="@sayfaMaxDeger" value="@sayfaMaxDeger" step="10" oninput="rangeGuncelle()" />
+								<input type="range" id="range-min" min="@sayfaMinDeger" max="@sayfaMaxDeger" value="@sayfaMinDeger" step="10" oninput="rangeGuncelle()" onchange="rangeDurumunuURLyeYaz()" />
+								<input type="range" id="range-max" min="@sayfaMinDeger" max="@sayfaMaxDeger" value="@sayfaMaxDeger" step="10" oninput="rangeGuncelle()" onchange="rangeDurumunuURLyeYaz()" />
 							</div>
 						</div>
 					</div>
@@ -1322,19 +1322,57 @@
 		const yazarMap = {};
 		tumYazarlar.forEach((y) => (yazarMap[y.id] = y));
 
-		btnKitaplar.addEventListener("click", () => {
-		viewKitaplar.classList.add("active");
-		viewYazarlar.classList.remove("active");
-		btnKitaplar.classList.add("active");
-		btnYazarlar.classList.remove("active");
-		});
+		// --- URL / QUERY STRING DURUM YÖNETİMİ ---
+		// Tüm filtreler, arama, aktif görünüm ve açık popup'lar URL'nin query
+		// string'inde tutulur. Böylece adres çubuğundaki her durum paylaşılabilir
+		// bir bağlantıdır ve tarayıcının geri/ileri tuşları beklendiği gibi çalışır.
+		function urlParametreleriOku() {
+		return new URLSearchParams(window.location.search);
+		}
 
-		btnYazarlar.addEventListener("click", () => {
+		// degisiklikler: { anahtar: deger|null } — deger null/undefined/"" ise
+		// parametre URL'den tamamen silinir (URL'yi olabildiğince sade tutmak için).
+		// push=true -> history.pushState (geri tuşuyla geri dönülebilir bir adım)
+		// push=false -> history.replaceState (mevcut adımı günceller, yeni adım eklemez)
+		function urlGuncelle(degisiklikler, opts) {
+		const push = !opts || opts.push !== false;
+		const params = urlParametreleriOku();
+		Object.keys(degisiklikler).forEach((anahtar) => {
+		const deger = degisiklikler[anahtar];
+		if (deger === null || deger === undefined || deger === "") {
+		params.delete(anahtar);
+		} else {
+		params.set(anahtar, deger);
+		}
+		});
+		const sorguMetni = params.toString();
+		const yeniUrl = window.location.pathname + (sorguMetni ? "?" + sorguMetni : "");
+		if (push) {
+		history.pushState({}, "", yeniUrl);
+		} else {
+		history.replaceState({}, "", yeniUrl);
+		}
+		}
+
+		function goruntuDegistir(hedef, push) {
+		if (hedef === "yazarlar") {
 		viewYazarlar.classList.add("active");
 		viewKitaplar.classList.remove("active");
 		btnYazarlar.classList.add("active");
 		btnKitaplar.classList.remove("active");
-		});
+		} else {
+		viewKitaplar.classList.add("active");
+		viewYazarlar.classList.remove("active");
+		btnKitaplar.classList.add("active");
+		btnYazarlar.classList.remove("active");
+		}
+		if (push !== false) {
+		urlGuncelle({ view: hedef === "yazarlar" ? "yazarlar" : null });
+		}
+		}
+
+		btnKitaplar.addEventListener("click", () => goruntuDegistir("kitaplar"));
+		btnYazarlar.addEventListener("click", () => goruntuDegistir("yazarlar"));
 
 		function toggleFilter(ad) {
 		const items = document.querySelectorAll(".filter-item");
@@ -1418,6 +1456,30 @@
 		const grid = document.getElementById("book-grid");
 		grid.innerHTML = "";
 		liste.forEach((kitap) => grid.appendChild(kitapKartOlustur(kitap)));
+		}
+
+		// Bir filtre checkbox'ı değiştiğinde: listeyi filtrele ve seçili durumu
+		// URL'ye yaz (her checkbox değişikliği geri tuşuyla geri alınabilir bir adım olsun).
+		function filtreDegisti() {
+		filtreUygula();
+		urlGuncelle({
+		yazar: seciliDegerleriAl("yazar").join(",") || null,
+		yayinevi: seciliDegerleriAl("yayinevi").join(",") || null,
+		cevirmen: seciliDegerleriAl("cevirmen").join(",") || null,
+		tur: seciliDegerleriAl("tur").join(",") || null,
+		seri: seciliDegerleriAl("seri").join(",") || null,
+		});
+		}
+
+		// Sayfa sayısı slider'ı bırakıldığında (sürüklenirken değil) URL'ye yazılır;
+		// aksi halde her piksel kaydırma geçmişe ayrı bir adım eklerdi.
+		function rangeDurumunuURLyeYaz() {
+		const rangeMin = document.getElementById("range-min");
+		const rangeMax = document.getElementById("range-max");
+		urlGuncelle({
+		sayfaMin: rangeMin.value !== rangeMin.min ? rangeMin.value : null,
+		sayfaMax: rangeMax.value !== rangeMax.max ? rangeMax.value : null,
+		});
 		}
 
 		function filtreUygula() {
@@ -1582,6 +1644,16 @@
 		item.classList.remove("open");
 		});
 
+		urlGuncelle({
+		yazar: null,
+		yayinevi: null,
+		cevirmen: null,
+		tur: null,
+		seri: null,
+		sayfaMin: null,
+		sayfaMax: null,
+		});
+
 		filtreUygula();
 		}
 
@@ -1674,7 +1746,7 @@
 		}
 		}
 		let aktifKitapId = null;
-		function popupAc(kitap) {
+		function popupAc(kitap, push) {
 		aktifKitapId = kitap.id;
 		document.getElementById("popup-kapak-img").src = kitap.kapak || "";
 		document.getElementById("popup-kitap-adi").textContent = kitap.ad;
@@ -1695,8 +1767,8 @@
 		if (yazarMap[yazar.id]) {
 		span.style.cursor = "pointer";
 		span.onclick = () => {
-		popupKapat();
-		btnYazarlar.click();
+		popupKapat(false);
+		goruntuDegistir("yazarlar", false);
 		yazarPopupAc(yazarMap[yazar.id]);
 		};
 		}
@@ -1725,15 +1797,22 @@
 
 		document.getElementById("kitap-popup-overlay").classList.add("aktif");
 		document.body.style.overflow = "hidden";
+
+		if (push !== false) {
+		urlGuncelle({ view: null, bookId: kitap.id, authorId: null });
+		}
 		}
 
 		function kitapDuzenle() {
 		if (!aktifKitapId) return;
 		window.open("/Admin/Index?bookId=" + aktifKitapId, "_blank");
 		}
-		function popupKapat() {
+		function popupKapat(push) {
 		document.getElementById("kitap-popup-overlay").classList.remove("aktif");
 		document.body.style.overflow = "";
+		if (push !== false) {
+		urlGuncelle({ bookId: null });
+		}
 		}
 
 		// --- YAZAR POPUP MANTIĞI ---
@@ -1779,8 +1858,8 @@
 		// Kitaba tıklanınca yazar popup'ı kapanır, Kitaplar sekmesine geçilir
 		// ve o kitabın kendi detay popup'ı açılır.
 		satir.onclick = () => {
-		yazarPopupKapat();
-		btnKitaplar.click();
+		yazarPopupKapat(false);
+		goruntuDegistir("kitaplar", false);
 		popupAc(kitap);
 		};
 		liste.appendChild(satir);
@@ -1788,7 +1867,7 @@
 		container.appendChild(liste);
 		}
 
-		function yazarPopupAc(yazar) {
+		function yazarPopupAc(yazar, push) {
 		aktifYazarId = yazar.id;
 		document.getElementById("yazar-popup-foto").src = yazar.foto || "";
 		document.getElementById("yazar-popup-ad").textContent = yazar.ad;
@@ -1804,6 +1883,10 @@
 
 		document.getElementById("yazar-popup-overlay").classList.add("aktif");
 		document.body.style.overflow = "hidden";
+
+		if (push !== false) {
+		urlGuncelle({ view: "yazarlar", authorId: yazar.id, bookId: null });
+		}
 		}
 
 		function yazarDuzenle() {
@@ -1811,9 +1894,12 @@
 		window.open("/Admin/Index?authorId=" + aktifYazarId, "_blank");
 		}
 
-		function yazarPopupKapat() {
+		function yazarPopupKapat(push) {
 		document.getElementById("yazar-popup-overlay").classList.remove("aktif");
 		document.body.style.overflow = "";
+		if (push !== false) {
+		urlGuncelle({ authorId: null });
+		}
 		}
 
 		// Türkçe karakterleri doğru küçülten, boşlukları yok sayan normalize fonksiyonu
@@ -1851,10 +1937,12 @@
 		document.getElementById("arama-bos-durum").style.display = "none";
 		}
 
-		function kitapAramaFiltrele() {
-		const sorgu = normalizeMetin(
-		document.getElementById("kitap-arama-input").value,
-		);
+		// deger verilmezse (örn. filtreUygula() içinden çağrıldığında) mevcut
+		// arama kutusunun değeri kullanılır.
+		function kitapAramaFiltrele(deger) {
+		const girisDegeri =
+		deger !== undefined ? deger : document.getElementById("kitap-arama-input").value;
+		const sorgu = normalizeMetin(girisDegeri);
 		const kartlar = document.querySelectorAll("#view-kitaplar .book-card");
 
 		let gorunenSayisi = 0;
@@ -1873,8 +1961,83 @@
 		}
 		}
 
-		// Sayfa ilk açıldığında filtre seçeneklerinin geçerlilik durumunu hesapla
-		filtreSecenekleriniGuncelle();
+		// Kullanıcı yazarken: anlık filtrele + URL'yi sessizce güncelle (replaceState).
+		// Her tuş vuruşunu geçmişe ayrı adım olarak eklemek geri tuşunu
+		// kullanılamaz hale getirir, bu yüzden push burada yapılmaz.
+		function kitapAramaGirisDegisti(deger) {
+		kitapAramaFiltrele(deger);
+		urlGuncelle({ q: deger || null }, { push: false });
+		}
+
+		// Kullanıcı arama kutusundan çıktığında (blur) veya değeri onayladığında:
+		// bu anı geri tuşuyla dönülebilir bir adım olarak geçmişe ekle.
+		function kitapAramaDurumunuURLyeYaz(deger) {
+		urlGuncelle({ q: deger || null });
+		}
+
+		// --- URL -> ARAYÜZ SENKRONİZASYONU ---
+		// Adres çubuğundaki mevcut query string'i okuyup arayüzün tamamını
+		// (görünüm, arama, filtreler, sayfa aralığı, açık popup) buna göre kurar.
+		// Hem ilk sayfa yüklemesinde hem de tarayıcı geri/ileri tuşuna
+		// basıldığında (popstate) çağrılır.
+		function URLdenDurumUygula() {
+		const params = urlParametreleriOku();
+
+		// Görünüm (Kitaplar / Yazarlar)
+		const view = params.get("view") === "yazarlar" ? "yazarlar" : "kitaplar";
+		goruntuDegistir(view, false);
+
+		// Arama kutusu
+		const q = params.get("q") || "";
+		document.getElementById("kitap-arama-input").value = q;
+
+		// Checkbox filtreleri (yazar, yayınevi, çevirmen, tür, seri)
+		["yazar", "yayinevi", "cevirmen", "tur", "seri"].forEach((ad) => {
+		const seciliIdler = (params.get(ad) || "")
+		.split(",")
+		.filter(Boolean)
+		.map(Number);
+		const liste = document.getElementById("list-" + ad);
+		if (!liste) return;
+		liste.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+		cb.checked = seciliIdler.includes(parseInt(cb.value));
+		});
+		});
+
+		// Sayfa sayısı aralığı
+		const rangeMin = document.getElementById("range-min");
+		const rangeMax = document.getElementById("range-max");
+		rangeMin.value = params.get("sayfaMin") || rangeMin.min;
+		rangeMax.value = params.get("sayfaMax") || rangeMax.max;
+		document.getElementById("range-min-label").textContent = rangeMin.value;
+		document.getElementById("range-max-label").textContent = rangeMax.value;
+
+		// Filtreleri ve aramayı uygula (bu, filtreSecenekleriniGuncelle'yi de tetikler)
+		filtreUygula();
+		kitapAramaFiltrele(q);
+
+		// Popup'lar: URL'de ilgili id varsa aç, yoksa kapat
+		const bookId = params.get("bookId");
+		if (bookId && kitapMap[bookId]) {
+		popupAc(kitapMap[bookId], false);
+		} else {
+		popupKapat(false);
+		}
+
+		const authorId = params.get("authorId");
+		if (authorId && yazarMap[authorId]) {
+		yazarPopupAc(yazarMap[authorId], false);
+		} else {
+		yazarPopupKapat(false);
+		}
+		}
+
+		// Tarayıcının geri/ileri tuşlarına basıldığında arayüzü URL'e göre yeniden kur
+		window.addEventListener("popstate", URLdenDurumUygula);
+
+		// Sayfa ilk açıldığında da (paylaşılan bir bağlantı ile gelinmiş olabilir)
+		// arayüzü URL'deki duruma göre kur
+		URLdenDurumUygula();
 
 	</script>
 
