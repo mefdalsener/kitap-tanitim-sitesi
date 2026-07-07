@@ -58,6 +58,27 @@
 	var kitapVerileriJson = System.Text.Json.JsonSerializer.Serialize(kitapVerileri);
 	var kitapVerileriMap = kitapVerileri.ToDictionary(k => k.id);
 
+	// Yazarları Türkçe alfabetik sıraya göre diz (Ad Soyad) ve popup'ta
+	// gösterilecek/istemci tarafında kullanılacak tüm bilgiyi tek seferde JSON'a hazırla.
+	// Not: Yazar -> Kitap ilişkisi ayrı bir sorgu ile değil, kitap verisinde zaten
+	// var olan yazarIds alanı üzerinden (ters yönde) istemci tarafında kuruluyor —
+	// tıpkı seri/ilgili kitaplar mantığında olduğu gibi, ekstra sorgu gerekmiyor.
+	var siraliYazarlar = Model.Authors
+		.OrderBy(a => a.AuthorName + " " + a.AuthorSurname, StringComparer.Create(trCulture, ignoreCase: true))
+		.ToList();
+
+	var yazarVerileri = siraliYazarlar.Select(yazar => new
+	{
+		id = yazar.AuthorID,
+		ad = yazar.AuthorName + " " + yazar.AuthorSurname,
+		foto = yazar.AuthorImage_URL ?? "",
+		dogumYili = yazar.AuthorBirthYear,
+		olumYili = yazar.AuthorDeathYear,
+		aciklama = yazar.AuthorBiography ?? ""
+	}).ToList();
+
+	var yazarVerileriJson = System.Text.Json.JsonSerializer.Serialize(yazarVerileri);
+
 }
 
 <!DOCTYPE html>
@@ -419,7 +440,7 @@
 				}
 
 				/* Arama kutusuyla eşleşmeyen ya da mevcut filtre kombinasyonunda
-																								   hiçbir kitap döndürmeyecek seçenekler tamamen gizlenir. */
+																											   hiçbir kitap döndürmeyecek seçenekler tamamen gizlenir. */
 				.filter-option.arama-gizli,
 				.filter-option.gecersiz {
 					display: none !important;
@@ -519,7 +540,7 @@
 				font-family: "Rakkas", serif;
 				font-weight: 400;
 				font-style: normal;
-				font-size: 40px;				
+				font-size: 40px;
 				color: #5B6B7A;
 				max-width: 500px;
 				line-height: 1.5;
@@ -557,8 +578,93 @@
 				color: #8CA3B8;
 			}
 
-			/* === KİTAP POPUP === */
-			#kitap-popup-overlay {
+			/* === YAZAR ALANI === */
+			.author-grid {
+				flex-grow: 1;
+				width: 100%;
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				grid-gap: 24px;
+				padding: 24px;
+				align-content: start;
+			}
+
+			.author-card {
+				padding: 12px;
+				display: flex;
+				flex-direction: row; 
+				align-items: center;
+				gap: 12px;
+				height: 100px;
+				max-height: 100px;
+				overflow: hidden;
+				border-radius: 14px;
+				background-color: #FFFFFF;
+				transition: transform 0.2s ease, box-shadow 0.2s ease;
+			}
+
+				.author-card:hover {
+					transform: translateY(-4px);
+					box-shadow: 0 10px 24px rgba(89,158,210,0.18);
+				}
+
+			.author-cover {
+				width: 76px;
+				height: 76px;
+				flex-shrink: 0;
+				overflow: hidden;
+				border-radius: 10px;
+				background: #F4F8FB;
+				box-shadow: 4px 6px 14px rgba(38,49,61,0.12);
+			}
+
+				.author-cover img {
+					width: 100%;
+					height: 100%;
+					display: block;
+					object-fit: cover;
+					object-position: center top;
+				}
+
+			.author-information {
+				display: flex;
+				flex-direction: column;
+				gap: 3px;
+				min-width: 0; /* sağdaki metin taşınca kartı genişletmesin */
+				overflow: hidden;
+			}
+
+			.author-name {
+				font-family: Helvetica, Arial, sans-serif;
+				font-size: 15px; /* 18px yerine */
+				font-weight: bold;
+				color: #26313D;
+			}
+
+			.author-lifespan {
+				font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+				font-size: 11px; /* 13px yerine */
+				font-weight: 300;
+				font-style: italic;
+				color: #599ED2;
+			}
+
+			.author-bio-preview {
+				font-size: 12px;
+				color: #26313D;
+				line-height: 1.35;
+				display: -webkit-box;
+				-webkit-line-clamp: 2; /* 3 yerine 2 */
+				-webkit-box-orient: vertical;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+
+			/* === POPUP (ORTAK) ===
+							 Hem kitap popup'ı hem de yazar popup'ı bu paylaşılan sınıfları kullanır.
+							 Element ID'leri sadece JS tarafında hangi popup'ın açılıp kapandığını
+							 ayırt etmek için tutuluyor; görsel stiller tamamen ortak. */
+			.popup-overlay {
 				display: none;
 				position: fixed;
 				top: 0;
@@ -571,11 +677,11 @@
 				justify-content: center;
 			}
 
-				#kitap-popup-overlay.aktif {
+				.popup-overlay.aktif {
 					display: flex;
 				}
 
-			#kitap-popup {
+			.popup-modal {
 				background: #FFFFFF;
 				border-radius: 16px;
 				width: 1000px;
@@ -605,7 +711,7 @@
 					color: #26313D;
 				}
 			/* Çarpının solundaki "Düzenle" butonu: aktif kitabı admin paneline
-																								güncelleme modunda gönderir. */
+																											güncelleme modunda gönderir. */
 			.popup-duzenle {
 				position: absolute;
 				top: 10px;
@@ -656,6 +762,19 @@
 					height: 100%;
 					width: auto;
 					display: block;
+					object-fit: contain;
+				}
+
+			.yazar-kapak {
+				width: 220px;
+				height: 220px;
+				max-width: 220px;
+				max-height: 220px;
+			}
+
+				.yazar-kapak img {
+					width: 100%;
+					height: 100%;
 					object-fit: contain;
 				}
 
@@ -825,9 +944,31 @@
 
 			.ilgili-liste {
 				display: flex;
-				flex-direction: column;
-				gap: 10px;
+				flex-direction: row;
+				flex-wrap: wrap;
+				gap: 14px;
 			}
+
+				.ilgili-liste .seri-kitap-satir {
+					flex-direction: column;
+					align-items: flex-start;
+					width: 100px;
+					padding: 8px;
+					gap: 8px;
+				}
+
+				.ilgili-liste .seri-kitap-kapak {
+					width: 100%;
+					height: 130px;
+				}
+
+				.ilgili-liste .seri-kitap-adi {
+					white-space: normal;
+					display: -webkit-box;
+					-webkit-line-clamp: 2;
+					-webkit-box-orient: vertical;
+					overflow: hidden;
+				}
 	</style>
 </head>
 <body>
@@ -1019,16 +1160,36 @@
 
 		<!-- YAZARLAR GÖRÜNÜMÜ -->
 		<div id="view-yazarlar" class="view-section">
-			<div class="author-grid">
-				<!-- yazar listesi buraya gelecek -->
-			</div>
+			<main class="author-grid" id="author-grid">
+				@foreach (var yazar in siraliYazarlar)
+				{
+					<div class="author-card" onclick="yazarPopupAc(yazarMap[@yazar.AuthorID])" style="cursor:pointer;">
+						<div class="author-cover">
+							@if (!string.IsNullOrEmpty(yazar.AuthorImage_URL))
+							{
+								<img src="@yazar.AuthorImage_URL" alt="@yazar.AuthorName @yazar.AuthorSurname" />
+							}
+						</div>
+						<div class="author-information">
+							<p class="author-name">@yazar.AuthorName @yazar.AuthorSurname</p>
+							<p class="author-lifespan">
+								@if (yazar.AuthorBirthYear.HasValue)
+								{
+									@(yazar.AuthorBirthYear + " – " + (yazar.AuthorDeathYear.HasValue ? yazar.AuthorDeathYear.Value.ToString() : "Hayatta"))
+								}
+							</p>
+							<p class="author-bio-preview">@yazar.AuthorBiography</p>
+						</div>
+					</div>
+				}
+			</main>
 		</div>
 
 	</div>
 
 	<!-- KİTAP POPUP -->
-	<div id="kitap-popup-overlay" onclick="popupKapat()">
-		<div id="kitap-popup" onclick="event.stopPropagation()">
+	<div id="kitap-popup-overlay" class="popup-overlay" onclick="popupKapat()">
+		<div id="kitap-popup" class="popup-modal" onclick="event.stopPropagation()">
 
 			<button class="popup-duzenle" onclick="kitapDuzenle()" title="Bu kitabı düzenle">✎</button>
 			<button class="popup-kapat" onclick="popupKapat()">✕</button>
@@ -1093,8 +1254,50 @@
 		</div>
 	</div>
 
-	<!-- Seri / ilgili kitap mantığı için tüm kitapların özet verisi -->
+	<!-- YAZAR POPUP -->
+	<div id="yazar-popup-overlay" class="popup-overlay" onclick="yazarPopupKapat()">
+		<div id="yazar-popup" class="popup-modal" onclick="event.stopPropagation()">
+
+			<button class="popup-duzenle" onclick="yazarDuzenle()" title="Bu yazarı düzenle">✎</button>
+			<button class="popup-kapat" onclick="yazarPopupKapat()">✕</button>
+
+			<div class="popup-icerik">
+
+				<!-- Sol: yazar fotoğrafı (kitap kapağıyla aynı boyutlandırma mantığı) -->
+				<div class="popup-sol">
+					<div class="popup-kapak yazar-kapak">
+						<img id="yazar-popup-foto" src="" alt="" />
+					</div>
+				</div>
+
+				<!-- Sağ: üstte sabit isim + yaşam aralığı, altta kaydırılabilir biyografi + kitaplar -->
+				<div class="popup-sag">
+
+					<div class="popup-sag-sabit">
+						<h2 id="yazar-popup-ad" class="popup-baslik"></h2>
+						<p id="yazar-popup-yasam" class="popup-yayinevi-adi"></p>
+					</div>
+
+					<div class="popup-sag-kaydirilabilir" id="yazar-popup-scroll-alani">
+
+						<div class="popup-aciklama">
+							<p id="yazar-popup-aciklama"></p>
+						</div>
+
+						<!-- Yazarın kitapları: kitap popup'ındaki seri bölümüyle aynı satır/kart deseni -->
+						<div class="popup-seri" id="yazar-popup-kitaplar"></div>
+
+					</div>
+
+				</div>
+
+			</div>
+		</div>
+	</div>
+
+	<!-- Seri / ilgili kitap mantığı ve yazar->kitap ters ilişkisi için tüm kitapların özet verisi -->
 	<script id="tum-kitaplar-data" type="application/json">@Html.Raw(kitapVerileriJson)</script>
+	<script id="tum-yazarlar-data" type="application/json">@Html.Raw(yazarVerileriJson)</script>
 
 	<script>
 		const btnKitaplar = document.getElementById("btn-kitaplar");
@@ -1107,6 +1310,12 @@
 		);
 		const kitapMap = {};
 		tumKitaplar.forEach((k) => (kitapMap[k.id] = k));
+
+		const tumYazarlar = JSON.parse(
+		document.getElementById("tum-yazarlar-data").textContent,
+		);
+		const yazarMap = {};
+		tumYazarlar.forEach((y) => (yazarMap[y.id] = y));
 
 		btnKitaplar.addEventListener("click", () => {
 		viewKitaplar.classList.add("active");
@@ -1490,6 +1699,86 @@
 		}
 		function popupKapat() {
 		document.getElementById("kitap-popup-overlay").classList.remove("aktif");
+		document.body.style.overflow = "";
+		}
+
+		// --- YAZAR POPUP MANTIĞI ---
+		// Kitap popup'ındaki popupAc / popupKapat / kitapDuzenle üçlüsüyle
+		// birebir aynı yapı; sadece yazar verisine göre çalışır. Yazarın kitap
+		// listesi, ayrı bir sorgu yerine tumKitaplar içindeki yazarIds alanı
+		// (ters ilişki) filtrelenerek elde edilir ve seri bölümündeki
+		// seriSatirOlustur() satır deseni yeniden kullanılır.
+		let aktifYazarId = null;
+
+		function yazarYasamAraligiMetni(yazar) {
+		if (!yazar.dogumYili) return "";
+		const olum = yazar.olumYili ? yazar.olumYili : "yaşıyor";
+		return `${yazar.dogumYili} – ${olum}`;
+		}
+
+		function yazarinKitaplariniBul(yazarId) {
+		return tumKitaplar
+		.filter((k) => Array.isArray(k.yazarIds) && k.yazarIds.includes(yazarId))
+		.sort((a, b) => a.ad.localeCompare(b.ad, "tr-TR"));
+		}
+
+		function renderYazarKitaplari(yazarId) {
+		const container = document.getElementById("yazar-popup-kitaplar");
+		container.innerHTML = "";
+
+		const kitaplar = yazarinKitaplariniBul(yazarId);
+		if (kitaplar.length === 0) {
+		container.style.display = "none";
+		return;
+		}
+		container.style.display = "flex";
+
+		const baslik = document.createElement("div");
+		baslik.className = "seri-baslik";
+		baslik.textContent = "Kitapları";
+		container.appendChild(baslik);
+
+		const liste = document.createElement("div");
+		liste.className = "ilgili-liste";
+		kitaplar.forEach((kitap) => {
+		const satir = seriSatirOlustur(kitap, "");
+		// Kitaba tıklanınca yazar popup'ı kapanır, Kitaplar sekmesine geçilir
+		// ve o kitabın kendi detay popup'ı açılır.
+		satir.onclick = () => {
+		yazarPopupKapat();
+		btnKitaplar.click();
+		popupAc(kitap);
+		};
+		liste.appendChild(satir);
+		});
+		container.appendChild(liste);
+		}
+
+		function yazarPopupAc(yazar) {
+		aktifYazarId = yazar.id;
+		document.getElementById("yazar-popup-foto").src = yazar.foto || "";
+		document.getElementById("yazar-popup-ad").textContent = yazar.ad;
+		document.getElementById("yazar-popup-yasam").textContent =
+		yazarYasamAraligiMetni(yazar) || "—";
+		document.getElementById("yazar-popup-aciklama").textContent =
+		yazar.aciklama || "Biyografi bulunmuyor.";
+
+		renderYazarKitaplari(yazar.id);
+
+		const kaydirmaAlani = document.getElementById("yazar-popup-scroll-alani");
+		kaydirmaAlani.scrollTop = 0;
+
+		document.getElementById("yazar-popup-overlay").classList.add("aktif");
+		document.body.style.overflow = "hidden";
+		}
+
+		function yazarDuzenle() {
+		if (!aktifYazarId) return;
+		window.open("/Admin/Index?authorId=" + aktifYazarId, "_blank");
+		}
+
+		function yazarPopupKapat() {
+		document.getElementById("yazar-popup-overlay").classList.remove("aktif");
 		document.body.style.overflow = "";
 		}
 
