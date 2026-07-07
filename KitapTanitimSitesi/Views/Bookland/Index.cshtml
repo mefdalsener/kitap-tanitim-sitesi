@@ -17,6 +17,7 @@
 		kapak = kitap.BookCoverImage_URL ?? "",
 		yazar = string.Join(", ", kitap.BookAuthors.Select(ba => ba.Author.AuthorName + " " + ba.Author.AuthorSurname)),
 		yazarIds = kitap.BookAuthors.Select(ba => ba.AuthorID).ToList(),
+		yazarListesi = kitap.BookAuthors.Select(ba => new { id = ba.AuthorID, ad = ba.Author.AuthorName + " " + ba.Author.AuthorSurname }).ToList(),
 		yayinevi = string.Join(", ", kitap.BookPublishers.Select(bp => bp.Publisher.PublisherName)),
 		yayineviIds = kitap.BookPublishers.Select(bp => bp.PublisherID).ToList(),
 		ilkYil = kitap.FirstPublishYear.HasValue ? kitap.FirstPublishYear.Value.ToString() : "",
@@ -816,6 +817,10 @@
 				color: #599ED2;
 				margin: 0;
 			}
+
+				.popup-yazar-adi span:hover {
+					text-decoration: underline;
+				}
 
 			.popup-yayinevi-adi {
 				font-size: 14px;
@@ -1674,6 +1679,35 @@
 		document.getElementById("popup-kapak-img").src = kitap.kapak || "";
 		document.getElementById("popup-kitap-adi").textContent = kitap.ad;
 		document.getElementById("popup-yazar").textContent = kitap.yazar;
+
+		const yazarElemani = document.getElementById("popup-yazar");
+		yazarElemani.innerHTML = "";
+
+		const yazarListesi = Array.isArray(kitap.yazarListesi) ? kitap.yazarListesi : [];
+
+		if (yazarListesi.length === 0) {
+		yazarElemani.textContent = kitap.yazar || "—";
+		} else {
+		yazarListesi.forEach((yazar, index) => {
+		const span = document.createElement("span");
+		span.textContent = yazar.ad;
+
+		if (yazarMap[yazar.id]) {
+		span.style.cursor = "pointer";
+		span.onclick = () => {
+		popupKapat();
+		btnYazarlar.click();
+		yazarPopupAc(yazarMap[yazar.id]);
+		};
+		}
+
+		yazarElemani.appendChild(span);
+
+		if (index < yazarListesi.length - 1) {
+		yazarElemani.appendChild(document.createTextNode(", "));
+		}
+		});
+		}
 		document.getElementById("popup-yayinevi").textContent = kitap.yayinevi;
 		document.getElementById("popup-ilk-yil").textContent = kitap.ilkYil || "—";
 		document.getElementById("popup-basim-yili").textContent =
