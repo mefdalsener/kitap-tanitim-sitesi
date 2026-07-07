@@ -67,6 +67,10 @@
 	<title>@ViewData["Title"]</title>
 	<link rel="stylesheet" href="~/css/site.css" />
 
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Rakkas&family=Sacramento&family=Special+Elite&display=swap" rel="stylesheet">
+
 	<style>
 			/* === GENEL === */
 			* {
@@ -415,7 +419,7 @@
 				}
 
 				/* Arama kutusuyla eşleşmeyen ya da mevcut filtre kombinasyonunda
-																					   hiçbir kitap döndürmeyecek seçenekler tamamen gizlenir. */
+																								   hiçbir kitap döndürmeyecek seçenekler tamamen gizlenir. */
 				.filter-option.arama-gizli,
 				.filter-option.gecersiz {
 					display: none !important;
@@ -493,13 +497,41 @@
 				box-shadow: 4px 6px 14px rgba(38,49,61,0.12);
 			}
 
-				.book-cover img {
+			/* === ARAMA SONUCU BULUNAMADI (EJDERHA) DURUMU === */
+			.arama-bos-durum {
+				flex-grow: 1;
+				display: none;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				gap: 18px;
+				padding: 60px 20px;
+				text-align: center;
+			}
+
+				.arama-bos-durum img {
 					width: 100%;
-					height: 100%;
-					display: block;
-					object-fit: cover;
-					object-position: center;
+					max-width: 600px;
+					height: auto;
 				}
+
+			.arama-bos-yazi {
+				font-family: "Rakkas", serif;
+				font-weight: 400;
+				font-style: normal;
+				font-size: 40px;				
+				color: #5B6B7A;
+				max-width: 500px;
+				line-height: 1.5;
+			}
+
+			.book-cover img {
+				width: 100%;
+				height: 100%;
+				display: block;
+				object-fit: cover;
+				object-position: center;
+			}
 
 			.book-information p {
 				margin: 0;
@@ -573,7 +605,7 @@
 					color: #26313D;
 				}
 			/* Çarpının solundaki "Düzenle" butonu: aktif kitabı admin paneline
-																					güncelleme modunda gönderir. */
+																								güncelleme modunda gönderir. */
 			.popup-duzenle {
 				position: absolute;
 				top: 10px;
@@ -978,6 +1010,11 @@
 				}
 			</main>
 
+			<div class="arama-bos-durum" id="arama-bos-durum">
+				<img src="~/images/little-dragon-in-library.png" alt="Kitap bulunamadı" />
+				<p class="arama-bos-yazi" id="arama-bos-yazi"></p>
+			</div>
+
 		</div>
 
 		<!-- YAZARLAR GÖRÜNÜMÜ -->
@@ -1211,6 +1248,9 @@
 
 		kitaplariRenderEt(filtrelenmis);
 		filtreSecenekleriniGuncelle();
+		// Filtreler kart listesini sıfırdan oluşturduğu için, arama kutusunda
+		// hâlâ bir metin varsa arama filtresini de yeniden uygula
+		kitapAramaFiltrele();
 		}
 
 		// --- KADEMELİ (FACETED) FİLTRELEME ---
@@ -1458,18 +1498,56 @@
 		return str.toLocaleLowerCase("tr-TR").replace(/\s+/g, "");
 		}
 
+		// Arama sonucu bulunamadığında gösterilecek ejderha görseli ile
+		// altındaki rastgele başlıklar
+		const aramaBosYazilar = [
+		"Ejderha kütüphaneyi dağıttı ama kitabı bulamadı.",
+		"Ejderhamız aradı, taradı, bulamadı.",
+		"Kütüphane ejderhası bütün rafları devirdi, kitap yine de yok.",
+		"Ejderha elinden geleni yaptı ama bu kitap burada değil.",
+		"Ejderhamız bu kadarını yapabildi, kusura bakma.",
+		"Kitap yok, ejderha bahane üretiyor.",
+		"Ejderha 'buradaydı' diyor ama kimse inanmıyor.",
+		"Ejderha bu kadar aradı, kitap hâlâ yok.",
+		"Ejderhamız didik didik aradı, sonuç sıfır.",
+		"Ejderha 47 kitabı yere döktü, aradığın hâlâ yok.",
+		"Ejderha bütün kuleyi yıktı, o kitap içinde çıkmadı.",
+		"Ejderhamız üzgün, kitap yok.",
+		"Bu sefer ejderha bile pes etti.",
+		"0 sonuç bulundu, ejderha yerde bulundu.",
+		];
+
+		function aramaBosDurumGoster() {
+		const rastgeleIndex = Math.floor(Math.random() * aramaBosYazilar.length);
+		document.getElementById("arama-bos-yazi").textContent =
+		aramaBosYazilar[rastgeleIndex];
+		document.getElementById("arama-bos-durum").style.display = "flex";
+		}
+
+		function aramaBosDurumGizle() {
+		document.getElementById("arama-bos-durum").style.display = "none";
+		}
+
 		function kitapAramaFiltrele() {
 		const sorgu = normalizeMetin(
 		document.getElementById("kitap-arama-input").value,
 		);
 		const kartlar = document.querySelectorAll("#view-kitaplar .book-card");
 
+		let gorunenSayisi = 0;
 		kartlar.forEach((kart) => {
 		const baslikEl = kart.querySelector(".book-title");
 		const baslik = normalizeMetin(baslikEl.textContent);
 		const eslesiyor = sorgu === "" || baslik.includes(sorgu);
 		kart.style.display = eslesiyor ? "flex" : "none";
+		if (eslesiyor) gorunenSayisi++;
 		});
+
+		if (gorunenSayisi === 0) {
+		aramaBosDurumGoster();
+		} else {
+		aramaBosDurumGizle();
+		}
 		}
 
 		// Sayfa ilk açıldığında filtre seçeneklerinin geçerlilik durumunu hesapla
