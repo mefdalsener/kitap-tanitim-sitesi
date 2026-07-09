@@ -1975,7 +1975,7 @@
 
 		// Türkçe karakterleri doğru küçülten, boşlukları yok sayan normalize fonksiyonu
 		function normalizeMetin(str) {
-		return str.toLocaleLowerCase("tr-TR").replace(/\s+/g, "");
+		return str.toLocaleLowerCase("tr-TR").replace(/[\s.]+/g, "");
 		}
 
 		// Arama sonucu bulunamadığında gösterilecek ejderha görseli ile

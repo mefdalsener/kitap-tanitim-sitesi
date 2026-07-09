@@ -16,6 +16,7 @@ namespace KitapTanitimSitesi.Models
         public DbSet<BookPublisher> BookPublishers { get; set; }
         public DbSet<Translator> Translators { get; set; }
         public DbSet<BookTranslator> BookTranslators { get; set; }
+        public DbSet<User> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -31,6 +32,15 @@ namespace KitapTanitimSitesi.Models
 
             modelBuilder.Entity<BookTranslator>()
                 .HasKey(bt => new { bt.BookID, bt.TranslatorID });
+
+            // User tablosunda Username ve Email alanları benzersiz (unique) olmalı
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.Username)
+                .IsUnique();
+
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.Email)
+                .IsUnique();
         }
     }
 }

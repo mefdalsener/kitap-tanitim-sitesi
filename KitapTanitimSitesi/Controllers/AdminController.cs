@@ -9,7 +9,7 @@ namespace KitapTanitimSitesi.Controllers
     {
         public IActionResult Index()
         {
-            return View();
+            return View("AdminIndex");
         }
 
         // ---- YENİ EKLENEN ACTION ----
@@ -446,6 +446,72 @@ namespace KitapTanitimSitesi.Controllers
                 genres = genreNames
             };
         }
+
+        // ---- YENİ EKLENEN: AuthorID ile veritabanından tek yazar arama
+        // (Bookland popup'ındaki "Yazarı Düzenle" akışı bunu kullanır) ----
+        [HttpGet]
+        public async Task<IActionResult> GetAuthorById(int authorId, [FromServices] AppDbContext db)
+        {
+            try
+            {
+                var author = await db.Authors.FindAsync(authorId);
+                if (author == null)
+                    return Json(new { found = false });
+
+                return Json(new
+                {
+                    found = true,
+                    author = new
+                    {
+                        id = author.AuthorID,
+                        name = author.AuthorName,
+                        surname = author.AuthorSurname,
+                        imageUrl = author.AuthorImage_URL,
+                        biography = author.AuthorBiography,
+                        birthYear = author.AuthorBirthYear,
+                        deathYear = author.AuthorDeathYear
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        // ---- YENİ EKLENEN: Bağımsız "Yazar Düzenleme" ekranından yazar güncelleme
+        // (kitap/çevirmen/yayınevi bağlamı olmadan sadece Authors tablosunu günceller) ----
+        [HttpPost]
+        public async Task<IActionResult> SaveAuthor([FromBody] SaveAuthorRequest req, [FromServices] AppDbContext db)
+        {
+            try
+            {
+                if (req == null || !req.AuthorId.HasValue || req.AuthorId.Value <= 0)
+                    return Json(new { error = "Güncellenecek yazar belirtilmedi." });
+
+                if (string.IsNullOrWhiteSpace(req.Name) && string.IsNullOrWhiteSpace(req.Surname))
+                    return Json(new { error = "Yazar adı veya soyadı gerekli." });
+
+                var author = await db.Authors.FindAsync(req.AuthorId.Value);
+                if (author == null)
+                    return Json(new { error = "Güncellenecek yazar bulunamadı. Sayfayı yenileyip tekrar deneyin." });
+
+                author.AuthorName = req.Name;
+                author.AuthorSurname = req.Surname;
+                author.AuthorBiography = req.Biography;
+                author.AuthorImage_URL = req.ImageUrl;
+                author.AuthorBirthYear = req.BirthYear;
+                author.AuthorDeathYear = req.DeathYear;
+
+                await db.SaveChangesAsync();
+
+                return Json(new { success = true, authorId = author.AuthorID });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
     }
 
     // ---- YENİ EKLENEN REQUEST MODELİ ----
@@ -459,5 +525,17 @@ namespace KitapTanitimSitesi.Controllers
     public class NameRequest
     {
         public string Name { get; set; }
+    }
+
+    // ---- YENİ EKLENEN: Bağımsız yazar güncelleme için request modeli ----
+    public class SaveAuthorRequest
+    {
+        public int? AuthorId { get; set; }
+        public string Name { get; set; }
+        public string Surname { get; set; }
+        public string Biography { get; set; }
+        public string ImageUrl { get; set; }
+        public int? BirthYear { get; set; }
+        public int? DeathYear { get; set; }
     }
 }

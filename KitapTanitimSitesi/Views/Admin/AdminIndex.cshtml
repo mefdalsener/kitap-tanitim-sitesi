@@ -645,7 +645,7 @@
 </head>
 <body>
 	<!-- BAŞLIK PANELİ -->
-	<div class="admin-header">Admin Paneli — Kitap Ekle</div>
+	<div class="admin-header" id="adminHeaderTitle">Admin Paneli — Kitap Ekle</div>
 
 	<div class="admin-body">
 
@@ -684,7 +684,7 @@
 		</div>
 
 		<!-- ISBN KARTI (kendi bloğu — otomatik doldur ile kitap bilgileri arasında) -->
-		<div class="card">
+		<div class="card" id="isbnCard">
 			<h2>📖 ISBN</h2>
 			<div class="scrape-bottom-row">
 				<div class="scrape-isbn-group">
@@ -709,7 +709,7 @@
 		</div>
 
 		<!-- KİTAP BİLGİLERİ -->
-		<div class="card">
+		<div class="card" id="kitapBilgileriCard">
 			<h2>📘 Kitap Bilgileri</h2>
 			<div class="edit-mode-banner" id="editModeBanner"></div>
 			<div class="two-col">
@@ -793,12 +793,14 @@
 		</div>
 
 		<!-- ÇEVİRMEN (çoklu çevirmen destekli) -->
-		<div id="translatorsContainer"></div>
-		<button type="button" class="add-more-btn" onclick="cevirmenEkle()">➕ Çevirmen Ekle</button>
+		<div id="translatorsSection">
+			<div id="translatorsContainer"></div>
+			<button type="button" class="add-more-btn" id="cevirmenEkleBtn" onclick="cevirmenEkle()">➕ Çevirmen Ekle</button>
+		</div>
 
 		<!-- YAZAR BİLGİLERİ (çoklu yazar destekli) -->
 		<div id="authorsContainer"></div>
-		<button type="button" class="add-more-btn" onclick="yazarEkle()">➕ Yazar Ekle</button>
+		<button type="button" class="add-more-btn" id="yazarEkleBtn" onclick="yazarEkle()">➕ Yazar Ekle</button>
 
 		<!-- KAYDET -->
 		<button class="save-btn" id="saveBtn" onclick="kaydet()">💾 Kaydet</button>
@@ -953,19 +955,19 @@
 			let dbAuthors = [];
 			let dbBooks = []; // seri sıralaması çakışma kontrolü için
 			let editingBookId = null; // ISBN'den kitap çekilirse burada dolar -> Kaydet, Güncelle'ye döner
+			let editingAuthorId = null; // authorId ile bağımsız yazar düzenleme moduna girilirse burada dolar
 			let editModeTetikleyici = null; // 'isbn' | 'bookId' | null — düzenleme moduna hangi akıştan girildiğini tutar
 			let booklandModuAktif = false; // Bookland'dan bookId ile gelindiyse true olur, link paneli kalıcı olarak kapatılır
 
-			// ---- Bookland'dan bookId ile gelindiğinde "Linklerden Otomatik Doldur" panelini kapatır ----
+			// ---- Bookland'dan bookId ile gelindiğinde "Linklerden Otomatik Doldur" panelini
+			//      tamamen görünmez yapar (devre dışı bırakmak yerine gizler) ----
 			function linkPaneliniDevreDisiBirak() {
 				booklandModuAktif = true;
 				document.getElementById('kitapyurduUrl').disabled = true;
 				document.getElementById('goodreadsUrl').disabled = true;
 				document.getElementById('getirBtn').disabled = true;
 				document.getElementById('linkTemizleBtn').disabled = true;
-				document.getElementById('scrapePaneli').style.opacity = '0.5';
-				document.getElementById('booklandDisableNote').style.display = 'block';
-				document.getElementById('linkExclusivityNote').style.display = 'none';
+				document.getElementById('scrapePaneli').style.display = 'none';
 			}
 
 			// ---- ISBN kutusu değiştiğinde: dışlamayı güncelle + gerekirse düzenleme modundan çık ----
@@ -1155,9 +1157,13 @@
 					formuDoldurVeDuzenlemeModunaGec(data);
 					editModeTetikleyici = 'bookId';
 
+					// Bookland üzerinden bookId ile gelindi: sayfa başlığını düzenleme moduna
+					// göre günceller.
+					document.getElementById('adminHeaderTitle').textContent = 'Admin Paneli — Kitap Düzenleme';
+
 					// Bookland üzerinden gelindi: "Linklerden Otomatik Doldur" paneli bu kitap
 					// zaten veritabanında kayıtlı olduğu için gereksiz ve kafa karıştırıcı —
-					// bu oturum boyunca kapatılır.
+					// bu oturum boyunca kapatılır (tamamen gizlenir).
 					linkPaneliniDevreDisiBirak();
 
 					if (data.bookPublisher && data.bookPublisher.isbn) {
@@ -1174,6 +1180,51 @@
 					durum.textContent = `✓ Bookland üzerinden açıldı: "${data.book.bookName}". Düzenleme modundasınız.`;
 				} catch (err) {
 					console.error('bookId ile otomatik doldurma başarısız:', err);
+				}
+			}
+
+			// ---- Bookland popup'ındaki "Yazarı Düzenle" akışından authorId ile gelinmişse
+			//      kitap/çevirmen ile ilgili panel ve butonları tamamen gizler, yazar
+			//      bilgilerini veritabanından çekip forma doldurur ve sayfayı bağımsız
+			//      "Yazar Düzenleme" moduna geçirir ----
+			async function urlDenAuthorIdIleModAyarla() {
+				const params = new URLSearchParams(window.location.search);
+				const authorId = params.get('authorId');
+				if (!authorId) return;
+
+				document.getElementById('adminHeaderTitle').textContent = 'Admin Paneli — Yazar Düzenleme';
+
+				// Yazar düzenleme modunda kitaba özgü paneller ve "ekle" butonları
+				// kullanılamaz ve tamamen görünmez hale gelir.
+				document.getElementById('scrapePaneli').style.display = 'none';
+				document.getElementById('isbnCard').style.display = 'none';
+				document.getElementById('kitapBilgileriCard').style.display = 'none';
+				document.getElementById('translatorsSection').style.display = 'none';
+				document.getElementById('yazarEkleBtn').style.display = 'none';
+
+				try {
+					const res = await fetch(`/Admin/GetAuthorById?authorId=${encodeURIComponent(authorId)}`);
+					const data = await res.json();
+
+					if (!data.found) {
+						showTopNotice('Yazar bulunamadı.', true);
+						return;
+					}
+
+					document.getElementById('authorName_0').value = toTitleCase(data.author.name) || '';
+					document.getElementById('authorSurname_0').value = toTitleCase(data.author.surname) || '';
+					document.getElementById('authorBio_0').value = data.author.biography || '';
+					document.getElementById('authorBirthYear_0').value = data.author.birthYear || '';
+					document.getElementById('authorDeathYear_0').value = data.author.deathYear || '';
+					document.getElementById('authorUrl_0').value = data.author.imageUrl || '';
+					onAuthorUrlChange(0);
+
+					editingAuthorId = data.author.id;
+					setSaveButtonMode(true);
+					document.getElementById('editModeBanner').textContent =
+						'✏️ Düzenleme modundasınız: Yazar bilgilerini güncelliyorsunuz. Kaydet butonu artık "Güncelle" olarak çalışacak.';
+				} catch (err) {
+					showTopNotice('Yazar bilgisi alınırken bağlantı hatası oluştu.', true);
 				}
 			}
 
@@ -1506,6 +1557,7 @@
 			tumCevirmenPanelleriniSifirla();
 			tumYazarPanelleriniSifirla();
 			loadDropdownData().then(urlDenBookIdIleDoldur);
+			urlDenAuthorIdIleModAyarla();
 			updateExclusivity();
 
 			// Kapak resmi URL değişince önizlemeyi güncelle
@@ -1974,6 +2026,13 @@
 			}
 
 			async function kaydet() {
+				// ---- authorId ile bağımsız yazar düzenleme modundaysak, kitap kaydetme
+				//      akışına hiç girmeden sadece yazarı güncelle ----
+				if (editingAuthorId) {
+					await yazarGuncelle();
+					return;
+				}
+
 				const bookName = document.getElementById('bookName').value.trim();
 				if (!bookName) {
 					alert('Kitap adı boş olamaz.');
@@ -2056,6 +2115,54 @@
 				} finally {
 					saveBtn.disabled = false;
 					if (!editingBookId) saveBtn.textContent = '💾 Kaydet';
+				}
+			}
+
+			// ---- Bağımsız "Yazar Düzenleme" modunda (authorId ile gelindiğinde) tek
+			//      panelden okunan bilgilerle sadece Authors kaydını günceller ----
+			async function yazarGuncelle() {
+				const name = document.getElementById('authorName_0').value.trim();
+				const surname = document.getElementById('authorSurname_0').value.trim();
+				if (!name && !surname) {
+					alert('Yazar adı veya soyadı boş olamaz.');
+					return;
+				}
+
+				const payload = {
+					authorId: editingAuthorId,
+					name: name,
+					surname: surname,
+					biography: document.getElementById('authorBio_0').value.trim() || null,
+					imageUrl: document.getElementById('authorUrl_0').value.trim() || null,
+					birthYear: document.getElementById('authorBirthYear_0').value || null,
+					deathYear: document.getElementById('authorDeathYear_0').value || null
+				};
+
+				const saveBtn = document.getElementById('saveBtn');
+				saveBtn.disabled = true;
+				saveBtn.textContent = '⏳ Güncelleniyor...';
+
+				try {
+					const res = await fetch('/Admin/SaveAuthor', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(payload)
+					});
+
+					const result = await res.json();
+
+					if (!res.ok || result.error) {
+						showTopNotice('Güncelleme sırasında hata oluştu: ' + (result.error || 'Bilinmeyen hata'), true);
+						return;
+					}
+
+					showTopNotice(`Yazar bilgileri güncellendi! (AuthorID: ${result.authorId})`);
+					await loadDropdownData(); // güncel bilgiler dropdown listelerine yansısın
+				} catch (err) {
+					showTopNotice('Bağlantı hatası: ' + err.message, true);
+				} finally {
+					saveBtn.disabled = false;
+					saveBtn.textContent = '🔄 Güncelle';
 				}
 			}
 	</script>

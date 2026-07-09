@@ -53,7 +53,7 @@ namespace KitapTanitimSitesi.Controllers
                     .ToListAsync()
             };
 
-            return View(viewModel);
+            return View("BooklandIndex", viewModel);
         }
     }
 }
