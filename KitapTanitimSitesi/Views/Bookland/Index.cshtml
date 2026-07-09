@@ -161,6 +161,31 @@
 				border-radius: 10px;
 			}
 
+			/* --- Kitaplar sekmesi arama çubuğu (filtre panelinin üstünde) --- */
+			.book-search-input {
+				width: 100%;
+				padding: 10px 16px;
+				border: 1px solid #DCE8F2;
+				border-radius: 999px;
+				background: #FFFFFF;
+				color: #26313D;
+				font-size: 14px;
+				outline: none;
+				margin-bottom: 10px;
+				flex-shrink: 0;
+				box-shadow: 0 4px 18px rgba(89,158,210,0.08);
+				transition: border-color 0.2s ease;
+				box-sizing: border-box;
+			}
+
+				.book-search-input::placeholder {
+					color: #8CA3B8;
+				}
+
+				.book-search-input:focus {
+					border-color: #599ED2;
+				}
+
 			/* --- Navigasyon butonları (Kitaplar / Yazarlar) --- */
 			.nav-buttons {
 				display: flex;
@@ -441,7 +466,7 @@
 				}
 
 				/* Arama kutusuyla eşleşmeyen ya da mevcut filtre kombinasyonunda
-																														   hiçbir kitap döndürmeyecek seçenekler tamamen gizlenir. */
+																																	   hiçbir kitap döndürmeyecek seçenekler tamamen gizlenir. */
 				.filter-option.arama-gizli,
 				.filter-option.gecersiz {
 					display: none !important;
@@ -580,6 +605,41 @@
 			}
 
 			/* === YAZAR ALANI === */
+			.author-area {
+				display: flex;
+				flex-direction: column;
+				width: 100%;
+				flex-grow: 1;
+			}
+
+			.author-search-bar {
+				width: 100%;
+				padding: 24px 24px 0 24px;
+				box-sizing: border-box;
+			}
+
+			.author-search-input {
+				width: 300px;
+				padding: 9px 16px;
+				border: 1px solid #DCE8F2;
+				border-radius: 999px;
+				background: #FFFFFF;
+				color: #26313D;
+				font-size: 14px;
+				outline: none;
+				box-shadow: 0 4px 18px rgba(89,158,210,0.08);
+				transition: border-color 0.2s ease;
+				box-sizing: border-box;
+			}
+
+				.author-search-input::placeholder {
+					color: #8CA3B8;
+				}
+
+				.author-search-input:focus {
+					border-color: #599ED2;
+				}
+
 			.author-grid {
 				flex-grow: 1;
 				width: 100%;
@@ -662,9 +722,9 @@
 			}
 
 			/* === POPUP (ORTAK) ===
-										 Hem kitap popup'ı hem de yazar popup'ı bu paylaşılan sınıfları kullanır.
-										 Element ID'leri sadece JS tarafında hangi popup'ın açılıp kapandığını
-										 ayırt etmek için tutuluyor; görsel stiller tamamen ortak. */
+													 Hem kitap popup'ı hem de yazar popup'ı bu paylaşılan sınıfları kullanır.
+													 Element ID'leri sadece JS tarafında hangi popup'ın açılıp kapandığını
+													 ayırt etmek için tutuluyor; görsel stiller tamamen ortak. */
 			.popup-overlay {
 				display: none;
 				position: fixed;
@@ -712,7 +772,7 @@
 					color: #26313D;
 				}
 			/* Çarpının solundaki "Düzenle" butonu: aktif kitabı admin paneline
-																														güncelleme modunda gönderir. */
+																																	güncelleme modunda gönderir. */
 			.popup-duzenle {
 				position: absolute;
 				top: 10px;
@@ -872,7 +932,13 @@
 				line-height: 1.6;
 				color: #26313D;
 				background: #FBFDFE;
+				text-align: justify;
 			}
+
+				.popup-aciklama p {
+					white-space: pre-wrap;
+					margin: 0;
+				}
 
 			/* === SERİ BÖLÜMÜ === */
 			.popup-seri {
@@ -982,18 +1048,15 @@
 	<header class="top-bar">
 		<div class="top-bar-left">
 			<div class="site-name">
-				<img src="~/images/med-logo-1.png" alt="Logo" style="height: 40px; object-fit: contain;" />
+				<a href="/bookland">
+					<img src="~/images/med-logo-1.png" alt="Logo" style="height: 40px; object-fit: contain;" />
+				</a>
 			</div>
 
 			<nav class="nav-buttons">
 				<button id="btn-kitaplar" class="nav-btn active">Kitaplar</button>
 				<button id="btn-yazarlar" class="nav-btn">Yazarlar</button>
 			</nav>
-		</div>
-
-		<div class="search-area">
-			<input type="text" id="kitap-arama-input" class="search-input"
-				   placeholder="🔍 Kitap ara..." oninput="kitapAramaGirisDegisti(this.value)" onchange="kitapAramaDurumunuURLyeYaz(this.value)" />
 		</div>
 
 		<div class="auth-buttons">
@@ -1009,6 +1072,8 @@
 		<div id="view-kitaplar" class="view-section active">
 
 			<aside class="filter-area">
+				<input type="text" id="kitap-arama-input" class="book-search-input"
+					   placeholder="🔍 Kitap ara..." oninput="kitapAramaGirisDegisti(this.value)" onchange="kitapAramaDurumunuURLyeYaz(this.value)" />
 				<div class="filter-reset-bar">
 					<span class="filter-reset-baslik">Filtreler</span>
 					<button class="filter-reset-btn" onclick="filtreleriSifirla()">Filtreleri Temizle</button>
@@ -1165,29 +1230,35 @@
 
 		<!-- YAZARLAR GÖRÜNÜMÜ -->
 		<div id="view-yazarlar" class="view-section">
-			<main class="author-grid" id="author-grid">
-				@foreach (var yazar in siraliYazarlar)
-				{
-					<div class="author-card" onclick="yazarPopupAc(yazarMap[@yazar.AuthorID])" style="cursor:pointer;">
-						<div class="author-cover">
-							@if (!string.IsNullOrEmpty(yazar.AuthorImage_URL))
-							{
-								<img src="@yazar.AuthorImage_URL" alt="@yazar.AuthorName @yazar.AuthorSurname" />
-							}
-						</div>
-						<div class="author-information">
-							<p class="author-name">@yazar.AuthorName @yazar.AuthorSurname</p>
-							<p class="author-lifespan">
-								@if (yazar.AuthorBirthYear.HasValue)
+			<div class="author-area">
+				<div class="author-search-bar">
+					<input type="text" id="yazar-arama-input" class="author-search-input"
+						   placeholder="🔍 Yazar ara..." oninput="yazarAramaGirisDegisti(this.value)" onchange="yazarAramaDurumunuURLyeYaz(this.value)" />
+				</div>
+				<main class="author-grid" id="author-grid">
+					@foreach (var yazar in siraliYazarlar)
+					{
+						<div class="author-card" onclick="yazarPopupAc(yazarMap[@yazar.AuthorID])" style="cursor:pointer;">
+							<div class="author-cover">
+								@if (!string.IsNullOrEmpty(yazar.AuthorImage_URL))
 								{
-									@(yazar.AuthorBirthYear + " – " + (yazar.AuthorDeathYear.HasValue ? yazar.AuthorDeathYear.Value.ToString() : "Hayatta"))
+									<img src="@yazar.AuthorImage_URL" alt="@yazar.AuthorName @yazar.AuthorSurname" />
 								}
-							</p>
-							<p class="author-bio-preview">@yazar.AuthorBiography</p>
+							</div>
+							<div class="author-information">
+								<p class="author-name">@yazar.AuthorName @yazar.AuthorSurname</p>
+								<p class="author-lifespan">
+									@if (yazar.AuthorBirthYear.HasValue)
+									{
+										@(yazar.AuthorBirthYear + " – " + (yazar.AuthorDeathYear.HasValue ? yazar.AuthorDeathYear.Value.ToString() : "Hayatta"))
+									}
+								</p>
+								<p class="author-bio-preview">@yazar.AuthorBiography</p>
+							</div>
 						</div>
-					</div>
-				}
-			</main>
+					}
+				</main>
+			</div>
 		</div>
 
 	</div>
@@ -1975,6 +2046,33 @@
 		urlGuncelle({ q: deger || null });
 		}
 
+		// --- YAZARLAR SEKMESİ ARAMASI ---
+		// Kitap aramasıyla aynı mantık; sadece yazar-grid kartlarında ve
+		// sadece yazar adına göre filtreler. Ayrı bir "qy" URL parametresi
+		// kullanılır ki kitap araması ("q") ile karışmasın.
+		function yazarAramaFiltrele(deger) {
+		const girisDegeri =
+		deger !== undefined ? deger : document.getElementById("yazar-arama-input").value;
+		const sorgu = normalizeMetin(girisDegeri);
+		const kartlar = document.querySelectorAll("#view-yazarlar .author-card");
+
+		kartlar.forEach((kart) => {
+		const adEl = kart.querySelector(".author-name");
+		const ad = normalizeMetin(adEl.textContent);
+		const eslesiyor = sorgu === "" || ad.includes(sorgu);
+		kart.style.display = eslesiyor ? "flex" : "none";
+		});
+		}
+
+		function yazarAramaGirisDegisti(deger) {
+		yazarAramaFiltrele(deger);
+		urlGuncelle({ qy: deger || null }, { push: false });
+		}
+
+		function yazarAramaDurumunuURLyeYaz(deger) {
+		urlGuncelle({ qy: deger || null });
+		}
+
 		// --- URL -> ARAYÜZ SENKRONİZASYONU ---
 		// Adres çubuğundaki mevcut query string'i okuyup arayüzün tamamını
 		// (görünüm, arama, filtreler, sayfa aralığı, açık popup) buna göre kurar.
@@ -1987,9 +2085,13 @@
 		const view = params.get("view") === "yazarlar" ? "yazarlar" : "kitaplar";
 		goruntuDegistir(view, false);
 
-		// Arama kutusu
+		// Arama kutusu (Kitaplar)
 		const q = params.get("q") || "";
 		document.getElementById("kitap-arama-input").value = q;
+
+		// Arama kutusu (Yazarlar)
+		const qy = params.get("qy") || "";
+		document.getElementById("yazar-arama-input").value = qy;
 
 		// Checkbox filtreleri (yazar, yayınevi, çevirmen, tür, seri)
 		["yazar", "yayinevi", "cevirmen", "tur", "seri"].forEach((ad) => {
@@ -2015,6 +2117,7 @@
 		// Filtreleri ve aramayı uygula (bu, filtreSecenekleriniGuncelle'yi de tetikler)
 		filtreUygula();
 		kitapAramaFiltrele(q);
+		yazarAramaFiltrele(qy);
 
 		// Popup'lar: URL'de ilgili id varsa aç, yoksa kapat
 		const bookId = params.get("bookId");

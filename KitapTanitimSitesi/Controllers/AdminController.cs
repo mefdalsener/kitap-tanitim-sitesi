@@ -71,17 +71,13 @@ namespace KitapTanitimSitesi.Controllers
                     return Json(new { error = "Seri adı boş olamaz." });
 
                 var name = req.Name.Trim();
-                var existing = await db.Series
-                    .FirstOrDefaultAsync(s => s.SeriesName.ToLower() == name.ToLower());
+                var (id, resultName, alreadyExisted) = await FindOrCreateByNameAsync(
+                    db, name,
+                    n => db.Series.FirstOrDefaultAsync(s => s.SeriesName.ToLower() == n.ToLower()),
+                    n => new Series { SeriesName = n },
+                    s => s.SeriesID, s => s.SeriesName);
 
-                if (existing != null)
-                    return Json(new { id = existing.SeriesID, name = existing.SeriesName, alreadyExisted = true });
-
-                var newSeries = new Series { SeriesName = name };
-                db.Series.Add(newSeries);
-                await db.SaveChangesAsync();
-
-                return Json(new { id = newSeries.SeriesID, name = newSeries.SeriesName, alreadyExisted = false });
+                return Json(new { id, name = resultName, alreadyExisted });
             }
             catch (Exception ex)
             {
@@ -99,22 +95,34 @@ namespace KitapTanitimSitesi.Controllers
                     return Json(new { error = "Yayınevi adı boş olamaz." });
 
                 var name = req.Name.Trim();
-                var existing = await db.Publishers
-                    .FirstOrDefaultAsync(p => p.PublisherName.ToLower() == name.ToLower());
+                var (id, resultName, alreadyExisted) = await FindOrCreateByNameAsync(
+                    db, name,
+                    n => db.Publishers.FirstOrDefaultAsync(p => p.PublisherName.ToLower() == n.ToLower()),
+                    n => new Publisher { PublisherName = n },
+                    p => p.PublisherID, p => p.PublisherName);
 
-                if (existing != null)
-                    return Json(new { id = existing.PublisherID, name = existing.PublisherName, alreadyExisted = true });
-
-                var newPublisher = new Publisher { PublisherName = name };
-                db.Publishers.Add(newPublisher);
-                await db.SaveChangesAsync();
-
-                return Json(new { id = newPublisher.PublisherID, name = newPublisher.PublisherName, alreadyExisted = false });
+                return Json(new { id, name = resultName, alreadyExisted });
             }
             catch (Exception ex)
             {
                 return Json(new { error = ex.Message });
             }
+        }
+        private async Task<(int id, string name, bool alreadyExisted)> FindOrCreateByNameAsync<T>(
+            AppDbContext db, string name,
+            Func<string, Task<T>> findExisting,
+            Func<string, T> createNew,
+            Func<T, int> getId,
+            Func<T, string> getName) where T : class
+        {
+            var existing = await findExisting(name);
+            if (existing != null)
+                return (getId(existing), getName(existing), true);
+
+            var created = createNew(name);
+            db.Add(created);
+            await db.SaveChangesAsync();
+            return (getId(created), getName(created), false);
         }
         // ---- YENİ EKLENEN: ISBN ile SADECE veritabanından kitap arama (internet çekme YOK) ----
         [HttpGet]
@@ -143,48 +151,7 @@ namespace KitapTanitimSitesi.Controllers
                 if (book == null)
                     return Json(new { found = false });
 
-                var authorsList = book.BookAuthors.Select(ba => ba.Author).ToList();
-                var translatorsList = book.BookTranslators.Select(bt => bt.Translator).ToList();
-                var genreNames = book.BookGenres.Select(bg => bg.Genre.GenreName).ToList();
-
-                return Json(new
-                {
-                    found = true,
-                    bookId = book.BookID,
-                    book = new
-                    {
-                        bookName = book.BookName,
-                        bookCoverImageUrl = book.BookCoverImage_URL,
-                        bookDescription = book.BookDescription,
-                        firstPublishYear = book.FirstPublishYear,
-                        seriesId = book.SeriesID,
-                        seriesOrder = book.SeriesOrder
-                    },
-                    authors = authorsList.Select(author => new
-                    {
-                        id = author.AuthorID,
-                        name = author.AuthorName,
-                        surname = author.AuthorSurname,
-                        biography = author.AuthorBiography,
-                        imageUrl = author.AuthorImage_URL,
-                        birthYear = author.AuthorBirthYear,
-                        deathYear = author.AuthorDeathYear
-                    }).ToList(),
-                    publisher = new { id = bookPublisher.PublisherID, name = bookPublisher.Publisher?.PublisherName },
-                    translators = translatorsList.Select(translator => new
-                    {
-                        id = translator.TranslatorID,
-                        name = translator.TranslatorName,
-                        surname = translator.TranslatorSurname
-                    }).ToList(),
-                    bookPublisher = new
-                    {
-                        pageCount = bookPublisher.PageCount,
-                        publishYear = bookPublisher.PublishYear,
-                        isbn = bookPublisher.ISBN
-                    },
-                    genres = genreNames
-                });
+                return Json(BuildBookDetailJson(book, bookPublisher));
             }
             catch (Exception ex)
             {
@@ -193,8 +160,9 @@ namespace KitapTanitimSitesi.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> SaveBook([FromBody] SaveBookRequest req, [FromServices] AppDbContext db)
+        public async Task<IActionResult> SaveBook([FromBody] SaveBookRequest req, [FromServices] AppDbContext db, [FromServices] EntityResolverService resolver)
         {
+            using var transaction = await db.Database.BeginTransactionAsync();
             try
             {
                 if (req?.Book == null || string.IsNullOrWhiteSpace(req.Book.BookName))
@@ -296,18 +264,7 @@ namespace KitapTanitimSitesi.Controllers
                     return Json(new { error = "En az bir yazar gerekli." });
 
                 // ---- Publisher ----
-                int publisherId;
-                if (req.Publisher.Id.HasValue)
-                {
-                    publisherId = req.Publisher.Id.Value;
-                }
-                else
-                {
-                    var newPublisher = new Publisher { PublisherName = req.Publisher.Name };
-                    db.Publishers.Add(newPublisher);
-                    await db.SaveChangesAsync();
-                    publisherId = newPublisher.PublisherID;
-                }
+                int publisherId = await resolver.ResolvePublisherAsync(req.Publisher, db);
 
                 // ---- Translators (opsiyonel, çoklu) ----
                 var translatorIds = new List<int>();
@@ -338,20 +295,7 @@ namespace KitapTanitimSitesi.Controllers
                 // ---- Genres (var olanı bul, yoksa oluştur) ----
                 var genreIds = new List<int>();
                 foreach (var genreName in req.Genres.Distinct())
-                {
-                    var existing = await db.Genres.FirstOrDefaultAsync(g => g.GenreName == genreName);
-                    if (existing != null)
-                    {
-                        genreIds.Add(existing.GenreID);
-                    }
-                    else
-                    {
-                        var newGenre = new Genre { GenreName = genreName };
-                        db.Genres.Add(newGenre);
-                        await db.SaveChangesAsync();
-                        genreIds.Add(newGenre.GenreID);
-                    }
-                }
+                    genreIds.Add(await resolver.ResolveGenreAsync(genreName, db));
 
                 // ---- Book: güncelleme mi, yeni ekleme mi? ----
                 int bookId;
@@ -418,11 +362,13 @@ namespace KitapTanitimSitesi.Controllers
                 }
 
                 await db.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 return Json(new { success = true, bookId = bookId, updated = isUpdate });
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 return Json(new { error = ex.Message });
             }
         }
@@ -443,58 +389,62 @@ namespace KitapTanitimSitesi.Controllers
                 if (book == null)
                     return Json(new { found = false });
 
-                var authorsList = book.BookAuthors.Select(ba => ba.Author).ToList();
                 var bookPublisherLink = book.BookPublishers.FirstOrDefault();
-                var translatorsList = book.BookTranslators.Select(bt => bt.Translator).ToList();
-                var genreNames = book.BookGenres.Select(bg => bg.Genre.GenreName).ToList();
-
-                return Json(new
-                {
-                    found = true,
-                    bookId = book.BookID,
-                    book = new
-                    {
-                        bookName = book.BookName,
-                        bookCoverImageUrl = book.BookCoverImage_URL,
-                        bookDescription = book.BookDescription,
-                        firstPublishYear = book.FirstPublishYear,
-                        seriesId = book.SeriesID,
-                        seriesOrder = book.SeriesOrder
-                    },
-                    authors = authorsList.Select(author => new
-                    {
-                        id = author.AuthorID,
-                        name = author.AuthorName,
-                        surname = author.AuthorSurname,
-                        biography = author.AuthorBiography,
-                        imageUrl = author.AuthorImage_URL,
-                        birthYear = author.AuthorBirthYear,
-                        deathYear = author.AuthorDeathYear
-                    }).ToList(),
-                    publisher = bookPublisherLink == null ? null : new
-                    {
-                        id = bookPublisherLink.PublisherID,
-                        name = bookPublisherLink.Publisher?.PublisherName
-                    },
-                    translators = translatorsList.Select(translator => new
-                    {
-                        id = translator.TranslatorID,
-                        name = translator.TranslatorName,
-                        surname = translator.TranslatorSurname
-                    }).ToList(),
-                    bookPublisher = bookPublisherLink == null ? null : new
-                    {
-                        pageCount = bookPublisherLink.PageCount,
-                        publishYear = bookPublisherLink.PublishYear,
-                        isbn = bookPublisherLink.ISBN
-                    },
-                    genres = genreNames
-                });
+                return Json(BuildBookDetailJson(book, bookPublisherLink));
             }
             catch (Exception ex)
             {
                 return Json(new { error = ex.Message });
             }
+        }
+        private object BuildBookDetailJson(Book book, BookPublisher bookPublisherLink)
+        {
+            var authorsList = book.BookAuthors.Select(ba => ba.Author).ToList();
+            var translatorsList = book.BookTranslators.Select(bt => bt.Translator).ToList();
+            var genreNames = book.BookGenres.Select(bg => bg.Genre.GenreName).ToList();
+
+            return new
+            {
+                found = true,
+                bookId = book.BookID,
+                book = new
+                {
+                    bookName = book.BookName,
+                    bookCoverImageUrl = book.BookCoverImage_URL,
+                    bookDescription = book.BookDescription,
+                    firstPublishYear = book.FirstPublishYear,
+                    seriesId = book.SeriesID,
+                    seriesOrder = book.SeriesOrder
+                },
+                authors = authorsList.Select(a => new
+                {
+                    id = a.AuthorID,
+                    name = a.AuthorName,
+                    surname = a.AuthorSurname,
+                    biography = a.AuthorBiography,
+                    imageUrl = a.AuthorImage_URL,
+                    birthYear = a.AuthorBirthYear,
+                    deathYear = a.AuthorDeathYear
+                }).ToList(),
+                publisher = bookPublisherLink == null ? null : new
+                {
+                    id = bookPublisherLink.PublisherID,
+                    name = bookPublisherLink.Publisher?.PublisherName
+                },
+                translators = translatorsList.Select(t => new
+                {
+                    id = t.TranslatorID,
+                    name = t.TranslatorName,
+                    surname = t.TranslatorSurname
+                }).ToList(),
+                bookPublisher = bookPublisherLink == null ? null : new
+                {
+                    pageCount = bookPublisherLink.PageCount,
+                    publishYear = bookPublisherLink.PublishYear,
+                    isbn = bookPublisherLink.ISBN
+                },
+                genres = genreNames
+            };
         }
     }
 
