@@ -44,21 +44,29 @@ namespace KitapTanitimSitesi.Services
             result.Books.BookName = CleanTextSingleLine(doc.DocumentNode
                 .SelectSingleNode("//h1[@class='pr_header__heading']")?.InnerText);
 
-            var authorNode = doc.DocumentNode
-                .SelectSingleNode("//div[@class='pr_producers__manufacturer']//a[@class='pr_producers__link']");
-            var fullAuthorName = CleanTextSingleLine(authorNode?.InnerText);
+            // ---- Yazarlar (çoklu) ----
+            // "pr_producers__manufacturer" div'i içinde her yazar ayrı bir
+            // "pr_producers__item" div'inde, kendi "a.pr_producers__link" linkiyle gelir.
+            var authorNodes = doc.DocumentNode
+                .SelectNodes("//div[@class='pr_producers__manufacturer']//a[@class='pr_producers__link']");
 
-            if (!string.IsNullOrEmpty(fullAuthorName))
+            if (authorNodes != null)
             {
-                SplitNameSurname(fullAuthorName, out var aName, out var aSurname);
-                result.Authors.AuthorName = aName;
-                result.Authors.AuthorSurname = aSurname;
+                foreach (var node in authorNodes)
+                {
+                    var fullAuthorName = CleanTextSingleLine(node.InnerText);
+                    if (string.IsNullOrEmpty(fullAuthorName)) continue;
+
+                    SplitNameSurname(fullAuthorName, out var aName, out var aSurname);
+                    result.Authors.Add(new AuthorsDto { AuthorName = aName, AuthorSurname = aSurname });
+                }
             }
 
             result.Publishers.PublisherName = CleanTextSingleLine(doc.DocumentNode
                 .SelectSingleNode("//div[@class='pr_producers__publisher']//a[@class='pr_producers__link']")?.InnerText);
 
-            string translatorFull = null;
+            // ---- Çevirmenler (çoklu) ----
+            // "attributes" tablosunda birden fazla "Çevirmen:" satırı olabilir, hepsini topluyoruz.
             var rows = doc.DocumentNode.SelectNodes("//div[@class='attributes']//tr");
             if (rows != null)
             {
@@ -70,18 +78,16 @@ namespace KitapTanitimSitesi.Services
                     var label = cells[0].InnerText.Trim();
                     var value = CleanTextSingleLine(cells[1].InnerText);
 
-                    if (label.Contains("Çevirmen")) translatorFull = value;
+                    if (label.Contains("Çevirmen"))
+                    {
+                        if (string.IsNullOrEmpty(value)) continue;
+                        SplitNameSurname(value, out var tName, out var tSurname);
+                        result.Translators.Add(new TranslatorsDto { TranslatorName = tName, TranslatorSurname = tSurname });
+                    }
                     else if (label.Contains("ISBN")) result.BookPublishers.ISBN = value;
                     else if (label.Contains("Sayfa Sayısı")) result.BookPublishers.PageCount = ParseInt(value);
                     else if (label.Contains("Yayın Tarihi")) result.BookPublishers.PublishYear = ExtractYear(value);
                 }
-            }
-
-            if (!string.IsNullOrEmpty(translatorFull))
-            {
-                SplitNameSurname(translatorFull, out var tName, out var tSurname);
-                result.Translators.TranslatorName = tName;
-                result.Translators.TranslatorSurname = tSurname;
             }
         }
 
@@ -110,30 +116,94 @@ namespace KitapTanitimSitesi.Services
                 .Where(g => g != "...more")
                 .ToList() ?? new List<string>();
 
-            var authorLinkNode = doc.DocumentNode.SelectSingleNode("//a[@class='ContributorLink']");
-            var authorUrl = authorLinkNode?.GetAttributeValue("href", null);
+            // ---- Katkıda bulunanlar (ContributorLinksList): Yazar / Çevirmen / Editör karışık gelir ----
+            // Rolü olmayan (role span'i yok) katkıda bulunanlar YAZAR'dır.
+            // Rolü "Translator" olanlar ÇEVİRMEN, "Editor" olanlar tamamen ATLANIR.
+            var contributorContainer = doc.DocumentNode.SelectSingleNode("//div[@class='ContributorLinksList']");
+            var contributorNodes = contributorContainer?.SelectNodes(".//a[@class='ContributorLink']");
 
-            if (!string.IsNullOrEmpty(authorUrl))
+            if (contributorNodes != null)
             {
-                var fullAuthorUrl = authorUrl.StartsWith("http") ? authorUrl : "https://www.goodreads.com" + authorUrl;
-                var authorDoc = await GetHtmlAsync(fullAuthorUrl);
+                foreach (var node in contributorNodes)
+                {
+                    var nameNode = node.SelectSingleNode(".//span[@class='ContributorLink__name']");
+                    var fullName = CleanTextSingleLine(nameNode?.InnerText);
+                    if (string.IsNullOrEmpty(fullName)) continue;
 
-                var imgSrc = authorDoc.DocumentNode
-                    .SelectSingleNode("//img[@itemprop='image']")?.GetAttributeValue("src", null);
+                    var roleNode = node.SelectSingleNode(".//span[@data-testid='role']");
+                    var role = CleanTextSingleLine(roleNode?.InnerText); // örn: "(Translator)", "(Editor)"
 
-                if (!string.IsNullOrEmpty(imgSrc))
-                    result.Authors.AuthorImage_URL = Regex.Replace(imgSrc, @"p\d+/", "p8/");
+                    // Çevirmen bilgisi zaten Kitapyurdu'ndan alınıyor; Goodreads'te "Translator"
+                    // veya "Editor" rolü görünen katkıda bulunanlar yazar değildir, tamamen atlanır.
+                    if (role != null && (role.Contains("Translator") || role.Contains("Editor")))
+                    {
+                        continue;
+                    }
 
-                var birthRaw = authorDoc.DocumentNode.SelectSingleNode("//div[@itemprop='birthDate']")?.InnerText;
-                result.Authors.AuthorBirthYear = ExtractYear(birthRaw);
+                    // Rol yok -> gerçek yazar. Yazar sayfasına gidip ek bilgileri (foto, biyografi,
+                    // doğum/ölüm yılı) çekiyoruz.
+                    SplitNameSurname(fullName, out var aName, out var aSurname);
+                    string authorImageUrl = null, authorBiography = null;
+                    int? authorBirthYear = null, authorDeathYear = null;
 
-                var deathRaw = authorDoc.DocumentNode.SelectSingleNode("//div[@itemprop='deathDate']")?.InnerText;
-                result.Authors.AuthorDeathYear = ExtractYear(deathRaw);
+                    var authorUrl = node.GetAttributeValue("href", null);
+                    if (!string.IsNullOrEmpty(authorUrl))
+                    {
+                        var fullAuthorUrl = authorUrl.StartsWith("http") ? authorUrl : "https://www.goodreads.com" + authorUrl;
+                        var authorDoc = await GetHtmlAsync(fullAuthorUrl);
 
-                var bioNode = authorDoc.DocumentNode
-                    .SelectSingleNode("//div[@class='aboutAuthorInfo']//span[starts-with(@id,'freeTextauthor')]");
-                result.Authors.AuthorBiography = CleanTextParagraphs(bioNode?.InnerHtml);
+                        var imgSrc = authorDoc.DocumentNode
+                            .SelectSingleNode("//img[@itemprop='image']")?.GetAttributeValue("src", null);
+
+                        if (!string.IsNullOrEmpty(imgSrc))
+                            authorImageUrl = Regex.Replace(imgSrc, @"p\d+/", "p8/");
+
+                        var birthRaw = authorDoc.DocumentNode.SelectSingleNode("//div[@itemprop='birthDate']")?.InnerText;
+                        authorBirthYear = ExtractYear(birthRaw);
+
+                        var deathRaw = authorDoc.DocumentNode.SelectSingleNode("//div[@itemprop='deathDate']")?.InnerText;
+                        authorDeathYear = ExtractYear(deathRaw);
+
+                        var bioNode = authorDoc.DocumentNode
+                            .SelectSingleNode("//div[@class='aboutAuthorInfo']//span[starts-with(@id,'freeTextauthor')]");
+                        authorBiography = CleanTextParagraphs(bioNode?.InnerHtml);
+                    }
+
+                    // Kitapyurdu'ndan bu yazar zaten eklenmişse (isim eşleşmesiyle), mükerrer
+                    // kayıt açmak yerine mevcut kaydı Goodreads'ten gelen ek bilgilerle tamamla.
+                    var existingAuthor = result.Authors.FirstOrDefault(a =>
+                        NormalizeForCompare(a.AuthorName) == NormalizeForCompare(aName) &&
+                        NormalizeForCompare(a.AuthorSurname) == NormalizeForCompare(aSurname));
+
+                    if (existingAuthor != null)
+                    {
+                        existingAuthor.AuthorImage_URL ??= authorImageUrl;
+                        existingAuthor.AuthorBiography ??= authorBiography;
+                        existingAuthor.AuthorBirthYear ??= authorBirthYear;
+                        existingAuthor.AuthorDeathYear ??= authorDeathYear;
+                    }
+                    else
+                    {
+                        result.Authors.Add(new AuthorsDto
+                        {
+                            AuthorName = aName,
+                            AuthorSurname = aSurname,
+                            AuthorImage_URL = authorImageUrl,
+                            AuthorBiography = authorBiography,
+                            AuthorBirthYear = authorBirthYear,
+                            AuthorDeathYear = authorDeathYear
+                        });
+                    }
+                }
             }
+        }
+
+        // Yazar/çevirmen isimlerini karşılaştırırken küçük harfe çevirip boşlukları sadeleştirir
+        // (Kitapyurdu ve Goodreads'ten gelen aynı kişinin mükerrer eklenmesini önlemek için).
+        private string NormalizeForCompare(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return "";
+            return Regex.Replace(text.Trim().ToLowerInvariant(), "\\s+", " ");
         }
 
         // ================== GOODREADS LİNK ÇÖZÜMLEME (SELENIUM) ==================
@@ -238,9 +308,12 @@ namespace KitapTanitimSitesi.Services
     public class SchemaResult
     {
         public BooksDto Books { get; set; } = new();
-        public AuthorsDto Authors { get; set; } = new();
+        // ---- ÇOKLU YAZAR / ÇEVİRMEN DESTEĞİ ----
+        // Kitapyurdu ve Goodreads artık birden fazla yazar/çevirmen döndürebiliyor,
+        // bu yüzden tekil DTO yerine liste kullanılıyor.
+        public List<AuthorsDto> Authors { get; set; } = new();
         public PublishersDto Publishers { get; set; } = new();
-        public TranslatorsDto Translators { get; set; } = new();
+        public List<TranslatorsDto> Translators { get; set; } = new();
         public List<string> Genres { get; set; } = new();
         public BookPublishersDto BookPublishers { get; set; } = new();
         public string GoodreadsUrl { get; set; }
