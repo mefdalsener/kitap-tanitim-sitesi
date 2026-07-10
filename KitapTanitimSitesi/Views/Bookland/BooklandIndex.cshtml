@@ -258,10 +258,76 @@
 				color: #FFFFFF;
 			}
 
-				.auth-btn-solid:hover {
-					background: #1B242D;
-					box-shadow: 0 4px 12px rgba(38,49,61,0.35);
+			/* --- Kullanıcı adı dropdown'ı (giriş yapılmış durumda) --- */
+			.kullanici-dropdown {
+				position: relative;
+			}
+
+			.kullanici-toggle {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				user-select: none;
+			}
+
+				.kullanici-toggle::after {
+					content: "";
+					width: 0;
+					height: 0;
+					border-left: 4px solid transparent;
+					border-right: 4px solid transparent;
+					border-top: 5px solid rgba(255,255,255,0.85);
+					transition: transform 0.2s ease;
 				}
+
+			.kullanici-dropdown.acik .kullanici-toggle::after {
+				transform: rotate(180deg);
+			}
+
+			.kullanici-menu {
+				position: absolute;
+				top: calc(100% + 8px);
+				right: 0;
+				min-width: 160px;
+				background: #FFFFFF;
+				border-radius: 10px;
+				box-shadow: 0 8px 24px rgba(38,49,61,0.18);
+				overflow: hidden;
+				opacity: 0;
+				visibility: hidden;
+				transform: translateY(-6px);
+				transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+				z-index: 200;
+			}
+
+			.kullanici-dropdown.acik .kullanici-menu {
+				opacity: 1;
+				visibility: visible;
+				transform: translateY(0);
+			}
+
+			.kullanici-menu-item {
+				display: block;
+				width: 100%;
+				border: none;
+				background: transparent;
+				color: #26313D;
+				font-size: 14px;
+				font-weight: 600;
+				text-align: left;
+				padding: 12px 16px;
+				cursor: pointer;
+				transition: background 0.15s ease;
+			}
+
+				.kullanici-menu-item:hover {
+					background: #F4F8FB;
+				}
+
+			.auth-btn-solid:hover {
+				background: #1B242D;
+				box-shadow: 0 4px 12px rgba(38,49,61,0.35);
+			}
 
 			/* === SAYFA DÜZENİ === */
 			.content-wrapper {
@@ -469,7 +535,7 @@
 				}
 
 				/* Arama kutusuyla eşleşmeyen ya da mevcut filtre kombinasyonunda
-																																				   hiçbir kitap döndürmeyecek seçenekler tamamen gizlenir. */
+																																							   hiçbir kitap döndürmeyecek seçenekler tamamen gizlenir. */
 				.filter-option.arama-gizli,
 				.filter-option.gecersiz {
 					display: none !important;
@@ -725,9 +791,9 @@
 			}
 
 			/* === POPUP (ORTAK) ===
-																 Hem kitap popup'ı hem de yazar popup'ı bu paylaşılan sınıfları kullanır.
-																 Element ID'leri sadece JS tarafında hangi popup'ın açılıp kapandığını
-																 ayırt etmek için tutuluyor; görsel stiller tamamen ortak. */
+																			 Hem kitap popup'ı hem de yazar popup'ı bu paylaşılan sınıfları kullanır.
+																			 Element ID'leri sadece JS tarafında hangi popup'ın açılıp kapandığını
+																			 ayırt etmek için tutuluyor; görsel stiller tamamen ortak. */
 			.popup-overlay {
 				display: none;
 				position: fixed;
@@ -775,7 +841,7 @@
 					color: #26313D;
 				}
 			/* Çarpının solundaki "Düzenle" butonu: aktif kitabı admin paneline
-																																				güncelleme modunda gönderir. */
+																																							güncelleme modunda gönderir. */
 			.popup-duzenle {
 				position: absolute;
 				top: 10px;
@@ -1070,8 +1136,17 @@
 			}
 			else
 			{
-				<span class="auth-btn auth-btn-ghost">@User.Identity.Name</span>
-				<!-- 8. adımda buraya dropdown + "Çıkış Yap" linki eklenecek -->
+				<div class="kullanici-dropdown" id="kullanici-dropdown">
+					<span class="auth-btn auth-btn-ghost kullanici-toggle" id="kullanici-toggle">
+						@User.Identity.Name
+					</span>
+					<div class="kullanici-menu" id="kullanici-menu">
+						<form asp-controller="Account" asp-action="Logout" method="post">
+							@Html.AntiForgeryToken()
+							<button type="submit" class="kullanici-menu-item">Çıkış Yap</button>
+						</form>
+					</div>
+				</div>
 			}
 		</div>
 	</header>
@@ -1455,6 +1530,35 @@
 
 		btnKitaplar.addEventListener("click", () => goruntuDegistir("kitaplar"));
 		btnYazarlar.addEventListener("click", () => goruntuDegistir("yazarlar"));
+
+		// --- Kullanıcı adı dropdown'ı (Çıkış Yap) ---
+		// Not: Bu sayfa _Layout.cshtml kullanmıyor ve Bootstrap JS dahil değil,
+		// bu yüzden dropdown açma/kapama sitenin geri kalanıyla tutarlı şekilde
+		// vanilla JS ile (popup'larda kullanılan "aktif" class deseninin
+		// benzeri olarak "acik" class'ı ile) yapılıyor.
+		const kullaniciDropdown = document.getElementById("kullanici-dropdown");
+		if (kullaniciDropdown) {
+		const kullaniciToggle = document.getElementById("kullanici-toggle");
+
+		kullaniciToggle.addEventListener("click", (e) => {
+		e.stopPropagation();
+		kullaniciDropdown.classList.toggle("acik");
+		});
+
+		// Menü dışına tıklanınca kapat
+		document.addEventListener("click", (e) => {
+		if (!kullaniciDropdown.contains(e.target)) {
+		kullaniciDropdown.classList.remove("acik");
+		}
+		});
+
+		// Esc tuşuyla kapat
+		document.addEventListener("keydown", (e) => {
+		if (e.key === "Escape") {
+		kullaniciDropdown.classList.remove("acik");
+		}
+		});
+		}
 
 		function toggleFilter(ad) {
 		const items = document.querySelectorAll(".filter-item");
