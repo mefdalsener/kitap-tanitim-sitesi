@@ -2,18 +2,133 @@
     ViewData["Title"] = "Anasayfa";
 }
 
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="utf-8" />
-    <title>@ViewData["Title"]</title>
-    <link rel="stylesheet" href="~/css/site.css" />
-</head>
-<body>
-    <main class="welcome-screen">
-        <h1>Hoşgeldiniz</h1>
-        <h2>KitapTanıtımSitesi</h2>
-        <a href="@Url.Action("Index", "Bookland")" class="btn-giris">Siteye Gir</a>
-    </main>
-</body>
-</html>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caudex:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --sa-navy: #1f2a52;
+        --sa-maroon: #3d1230;
+        --sa-maroon-dark: #29081c;
+        --sa-gold: #d9b98a;
+        --sa-gold-light: #f1e2c6;
+        --sa-cream: #faf6ee;
+    }
+
+    html, body {
+        margin: 0;
+        padding: 0;
+    }
+
+    .welcome-screen {
+        position: relative;
+        min-height: 100vh;
+        width: 100vw;
+        margin-left: calc(50% - 50vw);
+        margin-right: calc(50% - 50vw);
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 2rem 1.5rem;
+        overflow: hidden;
+        background-image: linear-gradient(180deg, rgba(20, 6, 15, 0.72) 0%, rgba(41, 8, 28, 0.82) 55%, rgba(20, 6, 15, 0.92) 100%), url("/images/homeBG.jpg");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }
+
+        .welcome-screen .site-logo {
+            width: min(320px, 70vw);
+            height: auto;
+            margin-bottom: 2.25rem;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+            border-radius: 12px;
+            animation: sa-fade-down 0.8s ease-out;
+        }
+
+        .welcome-screen h1 {
+            font-family: "Caudex", serif;
+            font-weight: 700;
+            font-style: italic;
+            color: var(--sa-gold-light);
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            margin: 0 0 0.35rem;
+            letter-spacing: 0.02em;
+            text-shadow: 0 3px 14px rgba(0, 0, 0, 0.55);
+            animation: sa-fade-up 0.8s ease-out 0.1s both;
+        }
+
+        .welcome-screen h2 {
+            font-family: "Caudex", serif;
+            font-weight: 400;
+            color: var(--sa-gold);
+            font-size: clamp(1.05rem, 2.4vw, 1.5rem);
+            margin: 0 0 2.75rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            opacity: 0.9;
+            animation: sa-fade-up 0.8s ease-out 0.25s both;
+        }
+
+    .btn-giris {
+        font-family: "Caudex", serif;
+        font-weight: 700;
+        display: inline-block;
+        padding: 0.9rem 2.75rem;
+        font-size: 1.05rem;
+        letter-spacing: 0.06em;
+        color: var(--sa-gold-light);
+        background: transparent;
+        border: 1.5px solid var(--sa-gold);
+        border-radius: 999px;
+        text-decoration: none;
+        transition: all 0.35s ease;
+        animation: sa-fade-up 0.8s ease-out 0.4s both;
+    }
+
+        .btn-giris:hover,
+        .btn-giris:focus {
+            background: var(--sa-gold);
+            color: var(--sa-maroon-dark);
+            border-color: var(--sa-gold);
+            box-shadow: 0 8px 24px rgba(217, 185, 138, 0.35);
+            transform: translateY(-2px);
+            text-decoration: none;
+        }
+
+    @@keyframes sa-fade-down {
+        from {
+            opacity: 0;
+            transform: translateY(-18px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes sa-fade-up {
+        from {
+            opacity: 0;
+            transform: translateY(18px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<main class="welcome-screen">
+    <img src="~/images/med-logo-1.png" alt="SatırArası" class="site-logo" />
+    <h1>Hoşgeldiniz</h1>
+    <h2>Satır Arası'na Adım Atın</h2>
+    <a asp-controller="Bookland" asp-action="Index" class="btn-giris">Siteye Gir</a>
+</main>
