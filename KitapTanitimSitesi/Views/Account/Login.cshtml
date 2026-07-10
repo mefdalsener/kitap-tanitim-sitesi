@@ -1,36 +1,38 @@
 ﻿@model KitapTanitimSitesi.Models.ViewModels.LoginIndex
 @{
-    ViewData["Title"] = "Giriş Yap";
+	ViewData["Title"] = "Giriş Yap";
 }
 
+<link rel="stylesheet" href="~/css/LoginRegister.css" />
+
 <div class="auth-logo">
-    <a asp-controller="Bookland" asp-action="Index">
-        <img src="~/images/med-logo-1.png" alt="Bookland" />
-    </a>
+	<a asp-controller="Bookland" asp-action="Index">
+		<img src="~/images/med-logo-1.png" alt="Bookland" />
+	</a>
 </div>
 
 <div class="auth-container">
-    <h2>Giriş Yap</h2>
+	<h2>Giriş Yap</h2>
 
-    <form asp-controller="Account" asp-action="Login" method="post">
-        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+	<form asp-controller="Account" asp-action="Login" method="post">
+		<div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-        <div class="form-group">
-            <label asp-for="UsernameOrEmail"></label>
-            <input asp-for="UsernameOrEmail" class="form-control" />
-            <span asp-validation-for="UsernameOrEmail" class="text-danger"></span>
-        </div>
+		<div class="form-group">
+			<label asp-for="UsernameOrEmail"></label>
+			<input asp-for="UsernameOrEmail" class="form-control" />
+			<span asp-validation-for="UsernameOrEmail" class="text-danger"></span>
+		</div>
 
-        <div class="form-group">
-            <label asp-for="Password"></label>
-            <input asp-for="Password" class="form-control" />
-            <span asp-validation-for="Password" class="text-danger"></span>
-        </div>
+		<div class="form-group">
+			<label asp-for="Password"></label>
+			<input asp-for="Password" class="form-control" />
+			<span asp-validation-for="Password" class="text-danger"></span>
+		</div>
 
-        <button type="submit" class="btn btn-primary">Giriş Yap</button>
-    </form>
+		<button type="submit" class="btn btn-primary">Giriş Yap</button>
+	</form>
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+	<partial name="_ValidationScriptsPartial" />
 }
