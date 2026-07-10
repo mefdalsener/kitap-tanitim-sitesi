@@ -1353,7 +1353,10 @@
 	<div id="kitap-popup-overlay" class="popup-overlay" onclick="popupKapat()">
 		<div id="kitap-popup" class="popup-modal" onclick="event.stopPropagation()">
 
-			<button class="popup-duzenle" onclick="kitapDuzenle()" title="Bu kitabı düzenle">✎</button>
+			@if (User.IsInRole("admin"))
+			{
+				<button class="popup-duzenle" onclick="kitapDuzenle()" title="Bu kitabı düzenle">✎</button>
+			}
 			<button class="popup-kapat" onclick="popupKapat()">✕</button>
 
 			<div class="popup-icerik">
@@ -1420,7 +1423,10 @@
 	<div id="yazar-popup-overlay" class="popup-overlay" onclick="yazarPopupKapat()">
 		<div id="yazar-popup" class="popup-modal" onclick="event.stopPropagation()">
 
-			<button class="popup-duzenle" onclick="yazarDuzenle()" title="Bu yazarı düzenle">✎</button>
+			@if (User.IsInRole("admin"))
+			{
+				<button class="popup-duzenle" onclick="yazarDuzenle()" title="Bu yazarı düzenle">✎</button>
+			}
 			<button class="popup-kapat" onclick="yazarPopupKapat()">✕</button>
 
 			<div class="popup-icerik">
