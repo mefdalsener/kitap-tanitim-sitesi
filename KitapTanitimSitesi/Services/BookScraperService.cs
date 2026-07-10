@@ -1,4 +1,7 @@
 ﻿using HtmlAgilityPack;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Support.UI;
 using System.Text.RegularExpressions;
 
 namespace KitapTanitimSitesi.Services
@@ -20,6 +23,12 @@ namespace KitapTanitimSitesi.Services
 
             if (!string.IsNullOrWhiteSpace(kitapyurduUrl))
                 await ScrapeKitapyurduAsync(kitapyurduUrl, result);
+
+            // Goodreads linki elle verilmediyse, ISBN üzerinden Selenium ile çözülür
+            // (Goodreads search -> book/show yönlendirmesi JavaScript tabanlı olduğu için
+            // HttpClient/GetAsync bunu YAKALAYAMAZ, tarayıcı gerekir).
+            if (string.IsNullOrWhiteSpace(goodreadsUrl) && !string.IsNullOrWhiteSpace(result.BookPublishers.ISBN))
+                goodreadsUrl = ResolveGoodreadsBookUrl(result.BookPublishers.ISBN);
 
             if (!string.IsNullOrWhiteSpace(goodreadsUrl))
                 await ScrapeGoodreadsAsync(goodreadsUrl, result);
@@ -79,6 +88,10 @@ namespace KitapTanitimSitesi.Services
         // ================== GOODREADS ==================
         private async Task ScrapeGoodreadsAsync(string url, SchemaResult result)
         {
+            // Bu noktaya gelen url zaten çözülmüş gerçek "book/show" linkidir
+            // (ResolveGoodreadsBookUrl tarafından bulunmuş ya da admin panelden elle girilmiştir).
+            result.GoodreadsUrl = url;
+
             var doc = await GetHtmlAsync(url);
 
             result.Books.BookCoverImage_URL = doc.DocumentNode
@@ -120,6 +133,43 @@ namespace KitapTanitimSitesi.Services
                 var bioNode = authorDoc.DocumentNode
                     .SelectSingleNode("//div[@class='aboutAuthorInfo']//span[starts-with(@id,'freeTextauthor')]");
                 result.Authors.AuthorBiography = CleanTextParagraphs(bioNode?.InnerHtml);
+            }
+        }
+
+        // ================== GOODREADS LİNK ÇÖZÜMLEME (SELENIUM) ==================
+        // ISBN'i Goodreads search'e verir, JS yönlendirmesi tamamlanana kadar (max 10 sn) bekler,
+        // sonra oluşan gerçek "book/show" linkini döndürür.
+        private string ResolveGoodreadsBookUrl(string isbn)
+        {
+            var searchUrl = $"https://www.goodreads.com/search?q={Uri.EscapeDataString(isbn)}";
+
+            var options = new ChromeOptions();
+            options.AddArgument("--headless=new");
+            options.AddArgument("--no-sandbox");
+            options.AddArgument("--disable-gpu");
+            options.AddArgument("--window-size=1280,800");
+            options.AddArgument(
+                "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36");
+
+            using var driver = new ChromeDriver(options);
+            try
+            {
+                driver.Navigate().GoToUrl(searchUrl);
+
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+                wait.Until(d => d.Url.Contains("/book/show/"));
+
+                return driver.Url;
+            }
+            catch (WebDriverTimeoutException)
+            {
+                // 10 saniyede yönlendirme gerçekleşmediyse (örn. arama tek sonuca düşmediyse)
+                // en azından search URL'sini geri döndür, kazıma tarafı boş alanlarla karşılaşır.
+                return driver.Url;
+            }
+            finally
+            {
+                driver.Quit();
             }
         }
 
@@ -193,6 +243,7 @@ namespace KitapTanitimSitesi.Services
         public TranslatorsDto Translators { get; set; } = new();
         public List<string> Genres { get; set; } = new();
         public BookPublishersDto BookPublishers { get; set; } = new();
+        public string GoodreadsUrl { get; set; }
     }
 
     public class BooksDto
