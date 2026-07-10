@@ -226,12 +226,15 @@
 			}
 
 			.auth-btn {
+				display: inline-block;
 				border: none;
 				font-size: 14px;
 				font-weight: 600;
 				padding: 9px 20px;
 				border-radius: 10px;
 				cursor: pointer;
+				text-decoration: none;
+				line-height: 1.2;
 				transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
 			}
 
@@ -466,7 +469,7 @@
 				}
 
 				/* Arama kutusuyla eşleşmeyen ya da mevcut filtre kombinasyonunda
-																																	   hiçbir kitap döndürmeyecek seçenekler tamamen gizlenir. */
+																																				   hiçbir kitap döndürmeyecek seçenekler tamamen gizlenir. */
 				.filter-option.arama-gizli,
 				.filter-option.gecersiz {
 					display: none !important;
@@ -722,9 +725,9 @@
 			}
 
 			/* === POPUP (ORTAK) ===
-													 Hem kitap popup'ı hem de yazar popup'ı bu paylaşılan sınıfları kullanır.
-													 Element ID'leri sadece JS tarafında hangi popup'ın açılıp kapandığını
-													 ayırt etmek için tutuluyor; görsel stiller tamamen ortak. */
+																 Hem kitap popup'ı hem de yazar popup'ı bu paylaşılan sınıfları kullanır.
+																 Element ID'leri sadece JS tarafında hangi popup'ın açılıp kapandığını
+																 ayırt etmek için tutuluyor; görsel stiller tamamen ortak. */
 			.popup-overlay {
 				display: none;
 				position: fixed;
@@ -772,7 +775,7 @@
 					color: #26313D;
 				}
 			/* Çarpının solundaki "Düzenle" butonu: aktif kitabı admin paneline
-																																	güncelleme modunda gönderir. */
+																																				güncelleme modunda gönderir. */
 			.popup-duzenle {
 				position: absolute;
 				top: 10px;
@@ -1060,8 +1063,16 @@
 		</div>
 
 		<div class="auth-buttons">
-			<button class="auth-btn auth-btn-ghost">Giriş Yap</button>
-			<button class="auth-btn auth-btn-solid">Kayıt Ol</button>
+			@if (!User.Identity.IsAuthenticated)
+			{
+				<a class="auth-btn auth-btn-ghost" asp-controller="Account" asp-action="Login">Giriş Yap</a>
+				<a class="auth-btn auth-btn-solid" asp-controller="Account" asp-action="Register">Kayıt Ol</a>
+			}
+			else
+			{
+				<span class="auth-btn auth-btn-ghost">@User.Identity.Name</span>
+				<!-- 8. adımda buraya dropdown + "Çıkış Yap" linki eklenecek -->
+			}
 		</div>
 	</header>
 
