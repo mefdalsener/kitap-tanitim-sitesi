@@ -1,6 +1,7 @@
 ﻿using KitapTanitimSitesi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using KitapTanitimSitesi.Models.ViewModels;
 
 namespace KitapTanitimSitesi.Controllers
 {

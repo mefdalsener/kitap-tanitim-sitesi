@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using KitapTanitimSitesi.Models;
+using KitapTanitimSitesi.Models.ViewModels;
 
 namespace KitapTanitimSitesi.Services
 {

@@ -1,10 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using KitapTanitimSitesi.Services;
 using Microsoft.EntityFrameworkCore;
 using KitapTanitimSitesi.Models;
+using KitapTanitimSitesi.Models.ViewModels;
 
 namespace KitapTanitimSitesi.Controllers
 {
+    [Authorize(Roles = "admin")]
     public class AdminController : Controller
     {
         public IActionResult Index()

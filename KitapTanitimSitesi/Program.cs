@@ -1,6 +1,8 @@
 using KitapTanitimSitesi.Models;
 using Microsoft.EntityFrameworkCore;
 using KitapTanitimSitesi.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +13,25 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<BookScraperService>();
 builder.Services.AddScoped<EntityResolverService>();
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.SlidingExpiration = true;
+
+        options.Events.OnRedirectToAccessDenied = context =>
+        {
+            context.Response.Redirect("/Bookland");
+            return Task.CompletedTask;
+        };
+
+        options.Events.OnRedirectToLogin = context =>
+        {
+            context.Response.Redirect("/Bookland");
+            return Task.CompletedTask;
+        };
+    });
 
 var app = builder.Build();
 
@@ -24,6 +45,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(

@@ -1,4 +1,4 @@
-﻿@model KitapTanitimSitesi.Models.BooklandViewModel
+﻿@model KitapTanitimSitesi.Models.ViewModels.BooklandViewModel
 
 @{
 	ViewData["Title"] = "Bookland";
@@ -1048,7 +1048,7 @@
 	<header class="top-bar">
 		<div class="top-bar-left">
 			<div class="site-name">
-				<a href="/bookland">
+				<a asp-controller="Bookland" asp-action="Index">
 					<img src="~/images/med-logo-1.png" alt="Logo" style="height: 40px; object-fit: contain;" />
 				</a>
 			</div>

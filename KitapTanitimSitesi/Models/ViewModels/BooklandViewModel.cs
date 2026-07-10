@@ -1,4 +1,4 @@
-﻿namespace KitapTanitimSitesi.Models
+﻿namespace KitapTanitimSitesi.Models.ViewModels
 {
     public class BooklandViewModel
     {
