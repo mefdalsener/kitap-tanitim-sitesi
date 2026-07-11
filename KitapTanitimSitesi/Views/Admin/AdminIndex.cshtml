@@ -1821,26 +1821,47 @@
 					document.getElementById('coverUrl').value = data.books.bookCoverImage_URL || '';
 					onCoverUrlChange();
 
-					// ---- Authors ----
-					// Kitapyurdu/Goodreads linki tek bir yazar döndürür; panel grubunu tek
-					// panele sıfırlayıp o paneli dolduruyoruz. Ek yazar gerekiyorsa kullanıcı
-					// "➕ Yazar Ekle" ile elle ekleyebilir.
-					tumYazarPanelleriniSifirla();
-					document.getElementById('authorName_0').value = toTitleCase(data.authors.authorName) || '';
-					document.getElementById('authorSurname_0').value = toTitleCase(data.authors.authorSurname) || '';
-					document.getElementById('authorBio_0').value = data.authors.authorBiography || '';
-					document.getElementById('authorBirthYear_0').value = data.authors.authorBirthYear || '';
-					document.getElementById('authorDeathYear_0').value = data.authors.authorDeathYear || '';
-					document.getElementById('authorUrl_0').value = data.authors.authorImage_URL || '';
-					onAuthorUrlChange(0);
+					// ---- Authors (çoklu) ----
+					// Kitapyurdu/Goodreads linki artık BİRDEN FAZLA yazar döndürebilir
+					// (data.authors bir dizidir). Her yazar için otomatik olarak yeni bir
+					// panel açılır ve dolduruluyor; kullanıcının elle "Yazar Ekle" demesine
+					// gerek kalmaz.
+					const scrapedAuthors = Array.isArray(data.authors) ? data.authors : (data.authors ? [data.authors] : []);
+					const matchedAuthors = [];
 
-					const matchedAuthor = findMatchingAuthor(data.authors.authorName, data.authors.authorSurname);
-					const authorSelect = document.getElementById('authorSelect_0');
-					if (matchedAuthor) {
-						authorSelect.value = matchedAuthor.id;
-						yazarSec(0);
+					document.getElementById('authorsContainer').innerHTML = '';
+					authorPanelCount = 0;
+
+					if (scrapedAuthors.length === 0) {
+						yazarEkle();
 					} else {
-						authorSelect.value = '';
+						scrapedAuthors.forEach(() => {
+							const idx = authorPanelCount++;
+							document.getElementById('authorsContainer').insertAdjacentHTML('beforeend', authorPanelHtml(idx));
+						});
+						renderAuthorOptions();
+
+						scrapedAuthors.forEach((a, idx) => {
+							document.getElementById(`authorName_${idx}`).value = toTitleCase(a.authorName) || '';
+							document.getElementById(`authorSurname_${idx}`).value = toTitleCase(a.authorSurname) || '';
+							document.getElementById(`authorBio_${idx}`).value = a.authorBiography || '';
+							document.getElementById(`authorBirthYear_${idx}`).value = a.authorBirthYear || '';
+							document.getElementById(`authorDeathYear_${idx}`).value = a.authorDeathYear || '';
+							document.getElementById(`authorUrl_${idx}`).value = a.authorImage_URL || '';
+							onAuthorUrlChange(idx);
+
+							const matchedAuthor = findMatchingAuthor(a.authorName, a.authorSurname);
+							const authorSelect = document.getElementById(`authorSelect_${idx}`);
+							if (matchedAuthor) {
+								authorSelect.value = matchedAuthor.id;
+								yazarSec(idx); // var olan yazarın DB'deki güncel bilgileriyle formu doldurur
+								matchedAuthors.push(matchedAuthor);
+							} else {
+								authorSelect.value = '';
+							}
+						});
+
+						panelKaldirButonlariniGuncelle('author');
 					}
 
 					// ---- Publisher ----
@@ -1858,18 +1879,39 @@
 						publisherSelect.value = found.value;
 					}
 
-					// ---- Translator ----
-					// Aynı şekilde çevirmen panel grubunu tek panele sıfırlayıp dolduruyoruz.
-					tumCevirmenPanelleriniSifirla();
-					document.getElementById('translatorName_0').value = toTitleCase(data.translators.translatorName) || '';
-					document.getElementById('translatorSurname_0').value = toTitleCase(data.translators.translatorSurname) || '';
+					// ---- Translators (çoklu) ----
+					// Kitapyurdu artık BİRDEN FAZLA çevirmen döndürebilir (data.translators
+					// bir dizidir). Her çevirmen için otomatik olarak yeni bir panel açılır.
+					const scrapedTranslators = Array.isArray(data.translators) ? data.translators : (data.translators ? [data.translators] : []);
+					const matchedTranslators = [];
 
-					const matchedTranslator = findMatchingTranslator(data.translators.translatorName, data.translators.translatorSurname);
-					const translatorSelect = document.getElementById('translatorSelect_0');
-					if (matchedTranslator) {
-						translatorSelect.value = matchedTranslator.id;
+					document.getElementById('translatorsContainer').innerHTML = '';
+					translatorPanelCount = 0;
+
+					if (scrapedTranslators.length === 0) {
+						cevirmenEkle();
 					} else {
-						translatorSelect.value = '';
+						scrapedTranslators.forEach(() => {
+							const idx = translatorPanelCount++;
+							document.getElementById('translatorsContainer').insertAdjacentHTML('beforeend', translatorPanelHtml(idx));
+						});
+						renderTranslatorOptions();
+
+						scrapedTranslators.forEach((t, idx) => {
+							document.getElementById(`translatorName_${idx}`).value = toTitleCase(t.translatorName) || '';
+							document.getElementById(`translatorSurname_${idx}`).value = toTitleCase(t.translatorSurname) || '';
+
+							const matchedTranslator = findMatchingTranslator(t.translatorName, t.translatorSurname);
+							const translatorSelect = document.getElementById(`translatorSelect_${idx}`);
+							if (matchedTranslator) {
+								translatorSelect.value = matchedTranslator.id;
+								matchedTranslators.push(matchedTranslator);
+							} else {
+								translatorSelect.value = '';
+							}
+						});
+
+						panelKaldirButonlariniGuncelle('translator');
 					}
 
 					// ---- BookPublisher (ISBN, sayfa sayısı, yayın yılı) ----
@@ -1889,8 +1931,8 @@
 					// ---- Eşleşme mesajları ----
 					const matchMessages = [];
 					if (matchedPublisher) matchMessages.push(`✓ Var olan yayınevi seçildi: <b>${toTitleCase(matchedPublisher.name)}</b>`);
-					if (matchedAuthor) matchMessages.push(`✓ Var olan yazar seçildi: <b>${toTitleCase(matchedAuthor.name + ' ' + matchedAuthor.surname)}</b>`);
-					if (matchedTranslator) matchMessages.push(`✓ Var olan çevirmen seçildi: <b>${toTitleCase(matchedTranslator.name + ' ' + matchedTranslator.surname)}</b>`);
+					matchedAuthors.forEach(a => matchMessages.push(`✓ Var olan yazar seçildi: <b>${toTitleCase(a.name + ' ' + a.surname)}</b>`));
+					matchedTranslators.forEach(t => matchMessages.push(`✓ Var olan çevirmen seçildi: <b>${toTitleCase(t.name + ' ' + t.surname)}</b>`));
 					document.getElementById('eslesmeSonuclari').innerHTML = matchMessages.join('<br>');
 
 					durum.className = 'success';
