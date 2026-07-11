@@ -1,0 +1,87 @@
+﻿@{
+	ViewData["Title"] = "Yazar Düzenle";
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+	<meta charset="utf-8" />
+	<title>@ViewData["Title"]</title>
+	<link rel="stylesheet" href="~/css/admin-panel.css" />
+</head>
+<body>
+	<!-- Bu sayfa her zaman düzenleme modundadır — AdminIndex'teki gibi
+	     state-machine (editingAuthorId var mı yok mu, panel gizle/göster vb.)
+	     yok. Başlık sabit, buton her zaman "Güncelle". -->
+	<div class="admin-header">Admin Paneli — Yazar Düzenleme</div>
+
+	<div class="admin-body">
+
+		<!-- YAZAR SEÇ — admin authorId ezberlemek/aramak zorunda kalmasın diye
+		     GetSelectData'daki mevcut yazar listesinden dropdown ile seçim yapılır.
+		     ?authorId=X query string ile gelinirse bu dropdown otomatik o yazarı seçer. -->
+		<div class="card">
+			<h2>🔍 Yazar Seç</h2>
+			<div class="form-group">
+				<label>Düzenlenecek Yazar</label>
+				<select id="authorSelect" onchange="authorSecildi()">
+					<option value="">— Yazar seçin —</option>
+				</select>
+			</div>
+		</div>
+
+		<!-- YAZAR BİLGİLERİ (tek, statik panel — index hep 0) -->
+		<div class="card author-panel" data-index="0">
+			<div class="card-header-row">
+				<h2>✍️ Yazar Bilgileri</h2>
+			</div>
+
+			<div class="author-row">
+				<div class="author-fields">
+					<div class="two-input-row">
+						<div class="form-group">
+							<label>Yazar Adı</label>
+							<input type="text" id="authorName_0" placeholder="Ad..." />
+						</div>
+						<div class="form-group">
+							<label>Yazar Soyadı</label>
+							<input type="text" id="authorSurname_0" placeholder="Soyad..." />
+						</div>
+					</div>
+
+					<div class="form-group">
+						<label>Biyografi</label>
+						<textarea id="authorBio_0" placeholder="Yazar hakkında..."></textarea>
+					</div>
+
+					<div class="two-input-row">
+						<div class="form-group">
+							<label>Doğum Yılı</label>
+							<input type="number" id="authorBirthYear_0" placeholder="Örn: 1821" />
+						</div>
+						<div class="form-group">
+							<label>Ölüm Yılı</label>
+							<input type="number" id="authorDeathYear_0" placeholder="Örn: 1881" />
+						</div>
+					</div>
+				</div>
+
+				<div class="author-image-col">
+					<div class="author-image-preview" id="authorPreview_0">
+						<span class="placeholder">Fotoğraf</span>
+					</div>
+					<input type="text" class="url-input" id="authorUrl_0"
+						   placeholder="Fotoğraf URL'si..."
+						   oninput="onAuthorUrlChange()" />
+				</div>
+			</div>
+		</div>
+
+		<!-- Buton HTML'de baştan "Güncelle" — JS ile metin değiştirme mantığı yok -->
+		<button class="save-btn edit-mode" id="saveBtn" onclick="yazarGuncelle()">🔄 Güncelle</button>
+
+	</div>
+
+	<script src="~/js/admin/authorUpdate.js"></script>
+</body>
+</html>

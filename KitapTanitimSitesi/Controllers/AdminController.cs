@@ -481,7 +481,14 @@ namespace KitapTanitimSitesi.Controllers
                 return Json(new { error = ex.Message });
             }
         }
-
+        // ---- YENİ: Bağımsız "Yazar Düzenleme" sayfası (Faz 1 — admin-modular-pages) ----
+        // authorId query string ile gelir (örn. /Admin/AuthorUpdate?authorId=5).
+        // Şimdilik server-side doğrulama yapmıyoruz — client zaten GetAuthorById ile
+        // kontrol ediyor. Server-side NotFound/redirect kontrolü Faz 5'te eklenecek.
+        public IActionResult AuthorUpdate(int authorId)
+        {
+            return View();
+        }
         // ---- YENİ EKLENEN: Bağımsız "Yazar Düzenleme" ekranından yazar güncelleme
         // (kitap/çevirmen/yayınevi bağlamı olmadan sadece Authors tablosunu günceller) ----
         [HttpPost]
