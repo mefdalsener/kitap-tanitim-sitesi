@@ -1141,6 +1141,10 @@
 						@User.Identity.Name
 					</span>
 					<div class="kullanici-menu" id="kullanici-menu">
+						@if (User.IsInRole("admin"))
+						{
+							<a href="https://localhost:7129/admin/" class="kullanici-menu-item">Kitap Ekle</a>
+						}
 						<form asp-controller="Account" asp-action="Logout" method="post">
 							@Html.AntiForgeryToken()
 							<button type="submit" class="kullanici-menu-item">Çıkış Yap</button>

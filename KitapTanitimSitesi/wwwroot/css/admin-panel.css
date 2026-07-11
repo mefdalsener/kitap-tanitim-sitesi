@@ -1,0 +1,633 @@
+﻿* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    color: #333;
+}
+
+.admin-header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #2d2d5e 100%);
+    color: white;
+    padding: 20px 32px;
+    font-size: 26px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 12px rgba(26,26,46,0.25);
+}
+
+.admin-body {
+    max-width: 1000px;
+    margin: 32px auto;
+    padding: 0 16px;
+}
+
+/* ORTAK KART TASARIMI — tüm paneller aynı koyu/gradient temada */
+.card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #2d2d5e 100%);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 16px rgba(26,26,46,0.25);
+}
+
+    .card h2 {
+        color: white;
+        font-size: 15px;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-bottom: 18px;
+        border-bottom: 1px solid rgba(255,255,255,0.15);
+        padding-bottom: 12px;
+        font-weight: 700;
+    }
+
+    /* ---- ORTAK GİRDİ STİLİ (tüm kartlarda tek tip) ---- */
+    .card .form-group,
+    .card .scrape-input-group,
+    .card .scrape-isbn-group {
+        margin-bottom: 14px;
+    }
+
+        .card .form-group label,
+        .card .scrape-input-group label,
+        .card .scrape-isbn-group label {
+            display: block;
+            font-size: 12px;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 6px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .card .form-group input,
+        .card .form-group textarea,
+        .card .form-group select,
+        .card .scrape-input-group input,
+        .card .scrape-isbn-group input {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            background: rgba(255,255,255,0.08);
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .card .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+            .card .form-group input::placeholder,
+            .card .form-group textarea::placeholder,
+            .card .scrape-input-group input::placeholder,
+            .card .scrape-isbn-group input::placeholder {
+                color: rgba(255,255,255,0.4);
+            }
+
+            .card .form-group input:focus,
+            .card .form-group textarea:focus,
+            .card .form-group select:focus,
+            .card .scrape-input-group input:focus,
+            .card .scrape-isbn-group input:focus {
+                outline: none;
+                background: rgba(255,255,255,0.14);
+                border-color: #4caf50;
+            }
+
+        .card .form-group select option {
+            background: #1a1a2e;
+            color: white;
+        }
+
+.two-input-row {
+    display: flex;
+    gap: 12px;
+}
+
+    .two-input-row .form-group {
+        flex: 1;
+    }
+
+/* ---- SCRAPE BÖLÜMÜ ALT SATIRI ---- */
+.scrape-bottom-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    margin-top: 4px;
+}
+
+.scrape-isbn-group {
+    flex: 1;
+}
+
+.getir-btn {
+    padding: 12px 28px;
+    background: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s, transform 0.1s;
+}
+
+    .getir-btn:hover {
+        background: #43a047;
+    }
+
+    .getir-btn:active {
+        transform: scale(0.97);
+    }
+
+    .getir-btn:disabled {
+        background: #666;
+        cursor: not-allowed;
+    }
+
+    .getir-btn .spinner {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255,255,255,0.4);
+        border-top-color: white;
+        border-radius: 50%;
+        display: none;
+        animation: spin 0.7s linear infinite;
+    }
+
+    .getir-btn.loading .spinner {
+        display: inline-block;
+    }
+
+    .getir-btn.loading .btn-label {
+        display: none;
+    }
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+#getirDurum {
+    display: block;
+    margin-top: 12px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.75);
+    min-height: 18px;
+}
+
+    #getirDurum.success {
+        color: #81c784;
+    }
+
+    #getirDurum.error {
+        color: #ef9a9a;
+    }
+
+/* İki kolon düzen */
+.two-col {
+    display: flex;
+    gap: 24px;
+    margin-top: 4px;
+}
+
+.col-left {
+    width: 200px;
+    flex-shrink: 0;
+}
+
+.col-right {
+    flex: 1;
+}
+
+/* Resim önizleme */
+.image-preview {
+    width: 100%;
+    aspect-ratio: 2/3;
+    background: rgba(255,255,255,0.06);
+    border: 1px dashed rgba(255,255,255,0.25);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+    .image-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .image-preview .placeholder {
+        color: rgba(255,255,255,0.45);
+        font-size: 13px;
+        text-align: center;
+        font-weight: bold;
+    }
+
+.url-input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    font-size: 12px;
+    background: rgba(255,255,255,0.08);
+    color: white;
+}
+
+    .url-input::placeholder {
+        color: rgba(255,255,255,0.4);
+    }
+
+/* + butonlu satır */
+.select-with-add {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+    .select-with-add select {
+        flex: 1;
+    }
+
+.add-btn {
+    width: 38px;
+    height: 38px;
+    background: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+    .add-btn:hover {
+        background: #43a047;
+    }
+
+/* ---- TÜR SEÇİMİ — ETİKET (PILL) STİLİ ---- */
+.pill-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 4px 2px;
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.8);
+    font-size: 13px;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+    .pill:hover {
+        border-color: rgba(255,255,255,0.5);
+        background: rgba(255,255,255,0.12);
+        color: white;
+    }
+
+    .pill .pill-check {
+        display: none;
+        font-size: 12px;
+        line-height: 1;
+    }
+
+    .pill.selected {
+        background: #4caf50;
+        border-color: #4caf50;
+        color: white;
+        font-weight: 600;
+    }
+
+        .pill.selected .pill-check {
+            display: inline;
+        }
+
+.pill-empty-hint {
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+    padding: 6px 2px;
+}
+
+/* Yazar bölümü - yatay düzen */
+.author-row {
+    display: flex;
+    gap: 24px;
+}
+
+.author-fields {
+    flex: 1;
+}
+
+.author-image-col {
+    width: 140px;
+    flex-shrink: 0;
+}
+
+.author-image-preview {
+    width: 100%;
+    aspect-ratio: 1/1;
+    background: rgba(255,255,255,0.06);
+    border: 1px dashed rgba(255,255,255,0.25);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+    .author-image-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .author-image-preview .placeholder {
+        color: rgba(255,255,255,0.45);
+        font-size: 12px;
+        text-align: center;
+        font-weight: bold;
+    }
+
+/* Panel başlığı + kaldır butonu aynı satırda */
+.card-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+}
+
+    .card-header-row h2 {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+.remove-panel-btn {
+    background: rgba(244,67,54,0.15);
+    border: 1px solid rgba(244,67,54,0.5);
+    color: #ff8a80;
+    border-radius: 6px;
+    font-size: 11px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+}
+
+    .remove-panel-btn:hover {
+        background: rgba(244,67,54,0.3);
+        color: white;
+    }
+
+/* "Çevirmen Ekle" / "Yazar Ekle" butonu - panel grubunun ALTINDA yer alır */
+.add-more-btn {
+    display: block;
+    width: 100%;
+    padding: 13px;
+    background: rgba(255,255,255,0.9);
+    border: 1px dashed rgba(45,45,94,0.4);
+    color: #2d2d5e;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    margin: -8px 0 24px 0;
+    transition: all 0.2s;
+}
+
+    .add-more-btn:hover {
+        background: white;
+        border-color: #2d2d5e;
+        transform: translateY(-1px);
+    }
+
+/* Kaydet butonu */
+.save-btn {
+    width: 100%;
+    padding: 15px;
+    background: #2e7d32;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 8px;
+    box-shadow: 0 4px 14px rgba(46,125,50,0.35);
+    transition: background 0.2s, transform 0.1s;
+}
+
+    .save-btn:hover {
+        background: #1b5e20;
+    }
+
+    .save-btn:active {
+        transform: scale(0.99);
+    }
+
+/* POPUP */
+.popup-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+}
+
+    .popup-overlay.active {
+        display: flex;
+    }
+
+.popup-box {
+    background: linear-gradient(135deg, #1a1a2e 0%, #2d2d5e 100%);
+    border-radius: 12px;
+    padding: 26px;
+    width: 340px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+}
+
+    .popup-box h3 {
+        font-size: 15px;
+        margin-bottom: 16px;
+        color: white;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .popup-box input {
+        width: 100%;
+        padding: 11px 14px;
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 16px;
+        background: rgba(255,255,255,0.08);
+        color: white;
+    }
+
+        .popup-box input::placeholder {
+            color: rgba(255,255,255,0.4);
+        }
+
+        .popup-box input:focus {
+            outline: none;
+            background: rgba(255,255,255,0.14);
+            border-color: #4caf50;
+        }
+
+.popup-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+    .popup-buttons button {
+        padding: 9px 20px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: background 0.2s;
+    }
+
+.btn-confirm {
+    background: #4caf50;
+    color: white;
+}
+
+    .btn-confirm:hover {
+        background: #43a047;
+    }
+
+.btn-cancel {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+    .btn-cancel:hover {
+        background: rgba(255,255,255,0.18);
+    }
+
+/* ---- ALAN UYARISI (kırmızı, örn. seri sıralaması çakışması) ---- */
+.field-warning {
+    display: none;
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: #ff6b6b;
+    font-weight: 600;
+    line-height: 1.5;
+    background: rgba(255,107,107,0.1);
+    border: 1px solid rgba(255,107,107,0.35);
+    border-radius: 6px;
+    padding: 8px 10px;
+}
+
+/* ---- ÜST BİLGİ BANNER'I (alert() yerine) ---- */
+.top-notice {
+    position: fixed;
+    top: -80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2e7d32;
+    color: white;
+    padding: 14px 26px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    z-index: 999;
+    transition: top 0.3s ease;
+    max-width: 90%;
+    text-align: center;
+}
+
+    .top-notice.show {
+        top: 20px;
+    }
+
+    .top-notice.error {
+        background: #c62828;
+    }
+
+/* ---- ISBN / LİNK KARŞILIKLI DIŞLAMA NOTU ---- */
+.exclusivity-note {
+    display: none;
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: #ffd54f;
+    background: rgba(255,213,79,0.1);
+    border: 1px solid rgba(255,213,79,0.3);
+    border-radius: 6px;
+    padding: 8px 12px;
+    line-height: 1.5;
+}
+
+/* ---- DÜZENLEME MODU (ISBN'den kitap çekildiğinde Kaydet -> Güncelle) ---- */
+.save-btn.edit-mode {
+    background: #1565c0;
+    box-shadow: 0 4px 14px rgba(21,101,192,0.4);
+}
+
+    .save-btn.edit-mode:hover {
+        background: #0d47a1;
+    }
+
+.edit-mode-banner {
+    display: none;
+    background: rgba(21,101,192,0.15);
+    border: 1px solid rgba(21,101,192,0.4);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #90caf9;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.card input:disabled,
+.card select:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
