@@ -17,6 +17,7 @@
 let dbSeriesList = [];
 let currentSeriesId = null;
 let currentBooks = []; // en son GetBooksInSeries'ten gelen, ekranda gösterilen liste
+let pendingRemoveBookId = null; // "seriden çıkar" popup'ı onaylanana kadar bekleyen kitap
 
 // ---- Türkçe uyumlu Title Case ----
 function toTitleCase(text) {
@@ -145,10 +146,13 @@ function kitapListesiRenderEt() {
 			<div class="series-strip-info">
 				<div class="kitap-adi">${toTitleCase(book.bookName)}</div>
 				<div class="yazar-adi">${toTitleCase(book.authorNames) || '— Yazar yok —'}</div>
-			</div>
+			</div>			
 			<div class="series-strip-order">
 				<input type="number" class="siraInput" value="${book.seriesOrder ?? ''}" />
-			</div>`;
+			</div>
+			<button type="button" class="series-strip-remove" onclick="kitapSerimdenCikar(${book.bookId})" title="Kitabı seriden çıkar">
+				<i class="fa-solid fa-x"></i>
+			</button>`;
 
 		container.appendChild(strip);
 	});
@@ -306,6 +310,52 @@ async function kitapEkleOnayla() {
 		await seriGetir(); // listeyi tazele, yeni kitap görünsün
 	} catch (err) {
 		showTopNotice('Bağlantı hatası: ' + err.message, true);
+	}
+}
+
+// ---- Kitap şeridindeki kırmızı ✕ butonu: sayfa temalı onay popup'ını açar ----
+function kitapSerimdenCikar(bookId) {
+	const book = currentBooks.find(b => b.bookId === bookId);
+	const isim = book ? toTitleCase(book.bookName) : 'Bu kitap';
+
+	pendingRemoveBookId = bookId;
+	document.getElementById('kitapSilMesaji').textContent =
+		`"${isim}" adlı kitabı seriden çıkarmak istediğinize emin misiniz?`;
+	popupAc('kitapSil');
+}
+
+// ---- Onay popup'ındaki "Seriden Çıkar" butonu: /Admin/RemoveBookFromSeries'i çağırır ----
+async function kitapSilOnayla() {
+	if (!pendingRemoveBookId) {
+		popupKapat('kitapSil');
+		return;
+	}
+
+	const bookId = pendingRemoveBookId;
+	const book = currentBooks.find(b => b.bookId === bookId);
+	const isim = book ? toTitleCase(book.bookName) : 'Kitap';
+
+	try {
+		const res = await fetch('/Admin/RemoveBookFromSeries', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ bookId, seriesId: parseInt(currentSeriesId, 10) })
+		});
+
+		const result = await res.json();
+
+		if (!res.ok || result.error) {
+			showTopNotice('Hata: ' + (result.error || 'Bilinmeyen hata'), true);
+			return;
+		}
+
+		popupKapat('kitapSil');
+		showTopNotice(`"${isim}" seriden çıkarıldı.`);
+		await seriGetir(); // listeyi tazele
+	} catch (err) {
+		showTopNotice('Bağlantı hatası: ' + err.message, true);
+	} finally {
+		pendingRemoveBookId = null;
 	}
 }
 

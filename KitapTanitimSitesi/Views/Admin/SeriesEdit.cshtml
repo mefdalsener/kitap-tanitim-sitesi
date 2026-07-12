@@ -16,9 +16,9 @@
     -->
     <style>
             /* ---- SAYFA TEMASI — Seri Düzenle (mor).
-                                   Admin Index'teki mor kartla (8e2de2→e056fd) aynı renk ailesi,
-                                   ama okunabilirlik için orijinal lacivert temayla aynı koyuluk
-                                   seviyesinde tutuluyor. ---- */
+                                               Admin Index'teki mor kartla (8e2de2→e056fd) aynı renk ailesi,
+                                               ama okunabilirlik için orijinal lacivert temayla aynı koyuluk
+                                               seviyesinde tutuluyor. ---- */
             .admin-header {
                 background: linear-gradient(135deg, #2a1044 0%, #5a2296 100%);
                 box-shadow: 0 2px 12px rgba(42,16,68,0.35);
@@ -91,6 +91,26 @@
                     text-overflow: ellipsis;
                 }
 
+            .series-strip-remove {
+                width: 34px;
+                height: 34px;
+                flex-shrink: 0;
+                border: none;
+                border-radius: 8px;
+                background: #d32f2f;
+                color: white;
+                font-size: 13px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: background 0.15s;
+            }
+
+                .series-strip-remove:hover {
+                    background: #b71c1c;
+                }
+
             .series-strip-order {
                 width: 70px;
                 flex-shrink: 0;
@@ -143,6 +163,21 @@
 
                 .secondary-btn:hover {
                     background: rgba(255,255,255,0.18);
+                }
+
+            .popup-message {
+                color: rgba(255,255,255,0.85);
+                font-size: 14px;
+                line-height: 1.5;
+                margin: 4px 0 18px;
+            }
+
+            .btn-danger {
+                background: #d32f2f !important;
+            }
+
+                .btn-danger:hover {
+                    background: #b71c1c !important;
                 }
     </style>
 </head>
@@ -215,6 +250,18 @@
             <div class="popup-buttons">
                 <button class="btn-cancel" onclick="popupKapat('kitapEkle')">İptal</button>
                 <button class="btn-confirm" onclick="kitapEkleOnayla()">Onayla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP: Kitabı Seriden Çıkar (onay) -->
+    <div class="popup-overlay" id="popupKitapSil">
+        <div class="popup-box">
+            <h3>Kitabı Seriden Çıkar</h3>
+            <p id="kitapSilMesaji" class="popup-message"></p>
+            <div class="popup-buttons">
+                <button class="btn-cancel" onclick="popupKapat('kitapSil')">İptal</button>
+                <button class="btn-confirm btn-danger" onclick="kitapSilOnayla()">Seriden Çıkar</button>
             </div>
         </div>
     </div>

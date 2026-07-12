@@ -691,6 +691,36 @@ namespace KitapTanitimSitesi.Controllers
                 return Json(new { error = ex.Message });
             }
         }
+
+        // ---- YENİ: Bir kitabı, kitap şeridindeki kırmızı çarpı butonuyla seriden çıkarır.
+        // SeriesID/SeriesOrder null'a çekilir, kitabın kendisi silinmez —
+        // GetUnassignedBooks listesine geri düşer. ----
+        [HttpPost]
+        public async Task<IActionResult> RemoveBookFromSeries([FromBody] RemoveBookFromSeriesRequest req, [FromServices] AppDbContext db)
+        {
+            try
+            {
+                if (req == null || req.BookId <= 0)
+                    return Json(new { error = "Geçersiz istek." });
+
+                var book = await db.Books.FindAsync(req.BookId);
+                if (book == null)
+                    return Json(new { error = "Kitap bulunamadı." });
+
+                if (!book.SeriesID.HasValue || (req.SeriesId > 0 && book.SeriesID.Value != req.SeriesId))
+                    return Json(new { error = "Kitap artık bu seride değil. Sayfayı yenileyip tekrar deneyin." });
+
+                book.SeriesID = null;
+                book.SeriesOrder = null;
+                await db.SaveChangesAsync();
+
+                return Json(new { success = true, bookId = book.BookID });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
     }
 
     // ---- YENİ EKLENEN REQUEST MODELİ ----
@@ -734,5 +764,12 @@ namespace KitapTanitimSitesi.Controllers
         public int BookId { get; set; }
         public int SeriesId { get; set; }
         public int? SeriesOrder { get; set; }
+    }
+
+    // ---- YENİ EKLENEN: Kitabı seriden çıkarma request modeli ----
+    public class RemoveBookFromSeriesRequest
+    {
+        public int BookId { get; set; }
+        public int SeriesId { get; set; }
     }
 }

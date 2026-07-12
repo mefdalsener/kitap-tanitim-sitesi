@@ -1,5 +1,4 @@
-﻿
-/* === GENEL === */
+﻿/* === GENEL === */
 * {
     margin: 0;
     padding: 0;
@@ -491,10 +490,11 @@ body {
 .book-grid {
     flex-grow: 1;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     grid-gap: 20px;
     padding: 12px;
     align-content: start;
+    justify-content: start;
 }
 
 .book-card {
