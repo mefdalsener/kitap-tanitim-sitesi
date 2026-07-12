@@ -255,7 +255,7 @@ body {
 
 /* === FİLTRE ALANI === */
 .filter-area {
-    flex-basis: 240px;
+    flex-basis: 190px;
     flex-shrink: 0;
     position: sticky;
     top: 60px;
@@ -283,6 +283,7 @@ body {
 .filter-reset-baslik {
     font-weight: bold;
     font-size: 14px;
+    margin: 10px;
     color: #26313D;
 }
 
@@ -344,8 +345,7 @@ body {
     align-items: center;
     padding: 14px 16px;
     cursor: pointer;
-    font-weight: bold;
-    font-size: 14px;
+    font-size: 10px;
     background: #FFFFFF;
     color: #26313D;
     user-select: none;
@@ -490,7 +490,7 @@ body {
 .book-grid {
     flex-grow: 1;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     grid-gap: 20px;
     padding: 12px;
     align-content: start;
