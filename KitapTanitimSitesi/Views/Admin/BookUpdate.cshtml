@@ -24,7 +24,21 @@
         </div>
     </div>
     <div class="admin-body">
+        <!-- KİTAP SEÇ — admin bookId ezberlemek zorunda kalmasın diye GetSelectData'daki
+        mevcut kitap listesinden dropdown ile seçim yapılabilir. AuthorUpdate'teki
+        "Yazar Seç" ile aynı mantık — ISBN yapıştırmaya gerek kalmadan da
+        düzenlenecek kitap buradan değiştirilebilir. -->
+        <div class="card">
+            <h2>🔍 Kitap Seç</h2>
+            <div class="form-group">
+                <label>Düzenlenecek Kitap</label>
+                <select id="bookSelect" onchange="kitapSecildi()">
+                    <option value="">— Kitap seçin —</option>
+                </select>
+            </div>
+        </div>
 
+        <!-- ISBN KARTI — BookUpdate'e özgü, SADE hali. ... -->
         <!--
             ISBN KARTI — BookUpdate'e özgü, SADE hali.
             BookSave'deki isbnCard'ın aksine "Getir/DB'de ara" butonu YOK, çünkü

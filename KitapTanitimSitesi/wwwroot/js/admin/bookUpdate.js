@@ -39,34 +39,70 @@ function kayitBulunamadiKapat() {
 }
 
 // ---- Sayfa açılışında: GetBookById ile veriyi çek ve formu doldur ----
-async function kitapVerisiniYukleVeDoldur() {
-	// Server (AdminController.BookUpdate) zaten kontrol etti — geçersizse fetch'e
-	// hiç gerek yok, direkt uyarı gösterip formu kilitliyoruz.
-	if (typeof kayitBulunamadiSunucuda !== 'undefined' && kayitBulunamadiSunucuda) {
+// ---- Verilen bookId'yi yükleyip formu doldurur — hem sayfa açılışında (URL'den),
+//      hem de "Kitap Seç" dropdown'ından seçim yapıldığında ortak kullanılır ----
+async function kitapVerisiniYukle(bookId) {
+	if (!bookId) {
+		formuKilitle(true);
 		kayitBulunamadiGoster();
-		formuKilitle();
 		return;
 	}
-
-	const bookId = getBookIdFromUrl();
 
 	try {
 		const res = await fetch('/Admin/GetBookById?bookId=' + encodeURIComponent(bookId));
 		const data = await res.json();
 
-		// Server render anında "var" dedi ama arada silinmiş olabilir (nadir bir
-		// yarış durumu) — bu yüzden bu kontrol yine de kalıyor.
 		if (data.error || !data.found) {
+			formuKilitle(true);
 			kayitBulunamadiGoster();
-			formuKilitle();
 			return;
 		}
 
+		kayitBulunamadiKapat();
+		formuKilitle(false);
 		formuVeriyleDoldur(data);
 	} catch (err) {
-		// Bu bir "kayıt yok" durumu değil, bağlantı sorunu — o yüzden toast kalıyor.
 		showTopNotice('Kitap verisi alınırken bağlantı hatası oluştu: ' + err.message, true);
-		formuKilitle();
+		formuKilitle(true);
+	}
+}
+
+// ---- Sayfa açılışında: URL'deki bookId'yi (varsa) yükler. Server (AdminController)
+//      zaten kontrol ettiyse (kayitBulunamadiSunucuda) fetch'e hiç gerek yok ----
+async function kitapVerisiniYukleVeDoldur() {
+	if (typeof kayitBulunamadiSunucuda !== 'undefined' && kayitBulunamadiSunucuda) {
+		formuKilitle(true);
+		kayitBulunamadiGoster();
+		return;
+	}
+	await kitapVerisiniYukle(getBookIdFromUrl());
+}
+
+// ---- "Kitap Seç" dropdown'ından bir kitap seçilince çalışır: veriyi yükler ve
+//      adres çubuğunu senkron tutar (AuthorUpdate'teki authorSecildi ile aynı mantık) ----
+async function kitapSecildi() {
+	const val = document.getElementById('bookSelect').value;
+	if (!val) return; // boş seçenek — mevcut duruma dokunma
+
+	await kitapVerisiniYukle(val);
+
+	const url = new URL(window.location.href);
+	url.searchParams.set('bookId', val);
+	window.history.replaceState({}, '', url);
+}
+
+// ---- "Kitap Seç" dropdown'ını dbBooks ile doldurur, URL'deki bookId varsa
+//      otomatik seçili getirir ----
+function kitapSeciminiDoldur() {
+	const select = document.getElementById('bookSelect');
+	select.innerHTML = '<option value="">— Kitap seçin —</option>';
+	[...dbBooks]
+		.sort((a, b) => a.name.localeCompare(b.name, 'tr-TR'))
+		.forEach(b => select.add(new Option(toTitleCase(b.name), b.id)));
+
+	const bookId = getBookIdFromUrl();
+	if (bookId && dbBooks.some(b => String(b.id) === String(bookId))) {
+		select.value = bookId;
 	}
 }
 
@@ -101,18 +137,17 @@ function formuVeriyleDoldur(data) {
 	checkSeriesOrderConflict();
 }
 
-// ---- Kitap bulunamazsa formu tamamen kilitler (Faz 5'te server-side NotFound eklenecek) ----
-function formuKilitle() {
-	bookNotFound = true;
+// ---- Faz 5.1: formuKilitle artık AuthorUpdate'teki gibi parametreli — böylece
+// "Kitap Seç" dropdown'ından yeni bir kitap seçildiğinde formu tekrar açabiliyoruz.
+function formuKilitle(kilitli) {
+	bookNotFound = kilitli;
 	document.querySelectorAll('#kitapBilgileriCard input, #kitapBilgileriCard textarea, #kitapBilgileriCard select, #isbnCard input')
-		.forEach(el => el.disabled = true);
+		.forEach(el => el.disabled = kilitli);
 	document.querySelectorAll('.author-panel input, .author-panel textarea, .author-panel select, .translator-panel input, .translator-panel select')
-		.forEach(el => el.disabled = true);
-	document.getElementById('yazarEkleBtn').disabled = true;
-	document.getElementById('cevirmenEkleBtn').disabled = true;
-
-	const saveBtn = document.getElementById('saveBtn');
-	saveBtn.disabled = true;
+		.forEach(el => el.disabled = kilitli);
+	document.getElementById('yazarEkleBtn').disabled = kilitli;
+	document.getElementById('cevirmenEkleBtn').disabled = kilitli;
+	document.getElementById('saveBtn').disabled = kilitli;
 }
 
 // ================== KAYDETME (GÜNCELLEME) AKIŞI ==================
@@ -203,4 +238,7 @@ async function kaydet() {
 renderGenrePills();
 tumCevirmenPanelleriniSifirla();
 tumYazarPanelleriniSifirla();
-loadDropdownData().then(kitapVerisiniYukleVeDoldur); // önce dropdown verisi, sonra kitap verisi (author/publisher id eşleşmesi için sıra önemli)
+loadDropdownData().then(() => {
+	kitapSeciminiDoldur();
+	kitapVerisiniYukleVeDoldur();
+});

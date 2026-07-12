@@ -250,6 +250,16 @@ async function getirVeDoldur() {
 		document.getElementById('pageCount').value = data.bookPublishers.pageCount || '';
 		document.getElementById('publishYear').value = data.bookPublishers.publishYear || '';
 		document.getElementById('isbnInput').value = data.bookPublishers.isbn || '';
+		updateExclusivity();
+
+		// Scrape'ten gelen ISBN veritabanında zaten kayıtlıysa kullanıcı ISBN kutusuna
+		// hiç dokunmadan bunu öğrenemiyordu (isbnGetir() sadece elle butona basılınca
+		// çalışıyordu). ISBN doluysa aynı DB kontrolünü burada da otomatik tetikliyoruz.
+		if (data.bookPublishers.isbn) {
+			await isbnGetir();
+		}
+
+		// ---- Genres ----
 
 		// ---- Genres ----
 		selectedGenres = new Set();
