@@ -500,13 +500,16 @@ namespace KitapTanitimSitesi.Controllers
             return View();
         }
         // ---- YENİ: BookUpdate — var olan bir kitabı düzenleme sayfası (Faz 4) ----
-        // Faz 5: server-side doğrulama eklendi. Bu sayfa AuthorUpdate'in aksine bookId
-        // olmadan anlamlı kullanılamaz (dropdown ile kitap seçme yok) — bu yüzden bookId
-        // eksikse (0) ya da veritabanında yoksa HER DURUMDA uyarı gösteriyoruz.
+        // Faz 5: server-side doğrulama eklendi. Faz 6: davranış AuthorUpdate ile
+        // tutarlı hâle getirildi — bookId=0 (parametre hiç gönderilmemiş, örn.
+        // çıplak /Admin/BookUpdate girişi) artık GEÇERLİ bir durum sayılıyor ve
+        // uyarı göstermiyor; "Kitap Seç" dropdown'ıyla bookId'siz de açılabilmeli.
+        // Uyarı sadece bookId VERİLMİŞ ama veritabanında yoksa (geçersiz/eski bir
+        // bağlantı) anlamlı.
         public async Task<IActionResult> BookUpdate(int bookId, [FromServices] AppDbContext db)
         {
-            bool kayitVarMi = bookId > 0 && await db.Books.AnyAsync(b => b.BookID == bookId);
-            ViewData["KayitBulunamadi"] = !kayitVarMi;
+            bool gecersizId = bookId > 0 && !await db.Books.AnyAsync(b => b.BookID == bookId);
+            ViewData["KayitBulunamadi"] = gecersizId;
             return View();
         }
         // ---- YENİ EKLENEN: Bağımsız "Yazar Düzenleme" ekranından yazar güncelleme

@@ -18,7 +18,39 @@ body {
     font-weight: bold;
     letter-spacing: 0.5px;
     box-shadow: 0 2px 12px rgba(26,26,46,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
 }
+
+/* ---- ÜST BAR SAĞ TARAFI — sayfalar arası gezinme ikonları (fa-house / fa-user-pen) ---- */
+.header-icons {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+}
+
+.header-icon-link {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: white;
+    color: #2d2d5e;
+    font-size: 15px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+    .header-icon-link:hover {
+        transform: translateY(-2px) scale(1.06);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
 
 .admin-body {
     max-width: 1000px;

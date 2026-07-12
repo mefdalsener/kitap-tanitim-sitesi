@@ -8,6 +8,7 @@
 	<meta charset="utf-8" />
 	<title>@ViewData["Title"]</title>
 	<link rel="stylesheet" href="~/css/admin-panel.css" />
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
 	<!--
 		SAYFA TEMASI — Yazar Düzenle (mavi).
 		Admin Index'teki mavi kartla (2193b0→6dd5ed) aynı renk ailesi, ama açık ucu
@@ -25,13 +26,23 @@
 			.popup-box {
 				background: linear-gradient(135deg, #0d2733 0%, #1a5f78 100%);
 			}
+
+			.header-icon-link {
+				color: #1a5f78;
+			}
 	</style>
 </head>
 <body>
 	<!-- Bu sayfa her zaman düzenleme modundadır — AdminIndex'teki gibi
 	     state-machine (editingAuthorId var mı yok mu, panel gizle/göster vb.)
 	     yok. Başlık sabit, buton her zaman "Güncelle". -->
-	<div class="admin-header">Admin Paneli — Yazar Düzenleme</div>
+	<div class="admin-header">
+		Admin Paneli — Yazar Düzenleme
+		<div class="header-icons">
+			<a href="/Admin" class="header-icon-link" title="Admin Paneline Dön"><i class="fa-solid fa-user-pen"></i></a>
+			<a href="/Bookland" class="header-icon-link" title="Bookland'e Git"><i class="fa-solid fa-house"></i></a>
+		</div>
+	</div>
 	<!-- KAYIT BULUNAMADI UYARISI — Faz 5. ViewData["KayitBulunamadi"] true ise sayfa
      render edilirken "active" class'ı ile birlikte gelir, JS'e ihtiyaç duymadan
      ilk anda görünür. -->

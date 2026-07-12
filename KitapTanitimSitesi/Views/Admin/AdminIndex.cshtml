@@ -18,6 +18,7 @@
     <meta charset="utf-8" />
     <title>@ViewData["Title"]</title>
     <link rel="stylesheet" href="~/css/admin-panel.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
     <style>
             /* ---- Bu stiller sadece landing page'e özgü — admin-panel.css'e
                                    eklenmedi çünkü diğer 3 sayfada (BookSave/BookUpdate/AuthorUpdate)
@@ -116,7 +117,12 @@
     </style>
 </head>
 <body>
-    <div class="admin-header">Admin Paneli</div>
+    <div class="admin-header">
+        Admin Paneli
+        <div class="header-icons">
+            <a href="/Bookland" class="header-icon-link" title="Bookland'e Git"><i class="fa-solid fa-house"></i></a>
+        </div>
+    </div>
 
     <div class="admin-body">
         <p class="landing-intro">Yapmak istediğiniz işlemi seçin.</p>

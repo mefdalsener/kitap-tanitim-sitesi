@@ -75,7 +75,17 @@ async function kitapVerisiniYukleVeDoldur() {
 		kayitBulunamadiGoster();
 		return;
 	}
-	await kitapVerisiniYukle(getBookIdFromUrl());
+
+	const bookId = getBookIdFromUrl();
+	if (!bookId) {
+		// bookId hiç verilmemiş (örn. çıplak /Admin/BookUpdate girişi) — AuthorUpdate ile
+		// tutarlı olarak bu GEÇERLİ bir durum, "bulunamadı" uyarısı gösterilmez.
+		// Form sadece "Kitap Seç" dropdown'ından seçim yapılana kadar kilitli kalır.
+		formuKilitle(true);
+		return;
+	}
+
+	await kitapVerisiniYukle(bookId);
 }
 
 // ---- "Kitap Seç" dropdown'ından bir kitap seçilince çalışır: veriyi yükler ve

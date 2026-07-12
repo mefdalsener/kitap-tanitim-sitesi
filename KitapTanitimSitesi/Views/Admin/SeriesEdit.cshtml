@@ -8,6 +8,7 @@
     <meta charset="utf-8" />
     <title>@ViewData["Title"]</title>
     <link rel="stylesheet" href="~/css/admin-panel.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
     <!--
         Aşağıdaki stiller SADECE bu sayfaya özgü (yatay kitap şeridi görünümü).
         admin-panel.css'e yeni sınıf eklemek yerine burada tutuluyor — o dosyanın
@@ -26,6 +27,10 @@
             .card,
             .popup-box {
                 background: linear-gradient(135deg, #2a1044 0%, #5a2296 100%);
+            }
+
+            .header-icon-link {
+                color: #5a2296;
             }
 
             .series-strip {
@@ -142,7 +147,13 @@
     </style>
 </head>
 <body>
-    <div class="admin-header">Admin Paneli — Seri Yönetimi</div>
+    <div class="admin-header">
+        Admin Paneli — Seri Yönetimi
+        <div class="header-icons">
+            <a href="/Admin" class="header-icon-link" title="Admin Paneline Dön"><i class="fa-solid fa-user-pen"></i></a>
+            <a href="/Bookland" class="header-icon-link" title="Bookland'e Git"><i class="fa-solid fa-house"></i></a>
+        </div>
+    </div>
 
     <div class="admin-body">
 
