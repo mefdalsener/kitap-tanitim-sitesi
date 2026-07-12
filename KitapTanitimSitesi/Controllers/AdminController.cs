@@ -489,6 +489,12 @@ namespace KitapTanitimSitesi.Controllers
         {
             return View();
         }
+
+        public IActionResult BookSave()
+        {
+            return View();
+        }
+
         // ---- YENİ EKLENEN: Bağımsız "Yazar Düzenleme" ekranından yazar güncelleme
         // (kitap/çevirmen/yayınevi bağlamı olmadan sadece Authors tablosunu günceller) ----
         [HttpPost]

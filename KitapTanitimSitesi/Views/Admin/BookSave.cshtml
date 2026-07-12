@@ -1,0 +1,186 @@
+﻿@{
+    ViewData["Title"] = "Kitap Ekle";
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/css/admin-panel.css" />
+</head>
+<body>
+    <div class="admin-header">Admin Paneli — Kitap Ekle</div>
+
+    <div class="admin-body">
+
+        <!-- OTOMATİK VERİ ÇEKME KARTI -->
+        <div class="card" id="scrapePaneli">
+            <h2>🔗 Kitapyurdu ve Goodreads Linklerinden Otomatik Doldur</h2>
+
+            <div class="scrape-input-group">
+                <label>Kitapyurdu Linki</label>
+                <input type="text" id="kitapyurduUrl" placeholder="https://www.kitapyurdu.com/kitap/..." oninput="updateExclusivity()" />
+            </div>
+
+            <div class="scrape-input-group">
+                <label>Goodreads Linki</label>
+                <input type="text" id="goodreadsUrl" placeholder="https://www.goodreads.com/book/show/..." oninput="updateExclusivity()" />
+            </div>
+
+            <div class="scrape-bottom-row">
+                <button class="getir-btn" id="getirBtn" onclick="getirVeDoldur()">
+                    <span class="spinner"></span>
+                    <span class="btn-label">⬇ Getir</span>
+                </button>
+                <button type="button" class="getir-btn" id="linkTemizleBtn" style="background:#555;" onclick="linkleriTemizle()" title="Link kutularını temizle ve ISBN moduna hızlı geç">
+                    <span class="btn-label">✕ Temizle</span>
+                </button>
+            </div>
+
+            <span id="getirDurum"></span>
+            <div id="eslesmeSonuclari" style="margin-top:8px; font-size:13px; color:#81c784; line-height:1.6;"></div>
+            <div class="exclusivity-note" id="linkExclusivityNote">
+                ⚠ ISBN girildiği için link alanları devre dışı bırakıldı. Link ile devam etmek için önce ISBN kutusunu boşaltın.
+            </div>
+        </div>
+
+        <!-- ISBN KARTI -->
+        <div class="card" id="isbnCard">
+            <h2>📖 ISBN</h2>
+            <div class="scrape-bottom-row">
+                <div class="scrape-isbn-group">
+                    <label>ISBN</label>
+                    <input type="text" id="isbnInput" placeholder="ISBN girin..." oninput="onIsbnInputChange()" />
+                </div>
+                <button class="getir-btn" id="isbnGetirBtn" onclick="isbnGetir()">
+                    <span class="spinner"></span>
+                    <span class="btn-label">🔎 Getir</span>
+                </button>
+                <button type="button" class="getir-btn" style="background:#555;" onclick="isbnTemizle()" title="ISBN kutusunu temizle ve link moduna hızlı geç">
+                    <span class="btn-label">✕ Temizle</span>
+                </button>
+            </div>
+            <span id="isbnDurum" style="display:block; margin-top:12px; font-size:13px; color:rgba(255,255,255,0.75); min-height:18px;"></span>
+            <div class="exclusivity-note" id="isbnExclusivityNote">
+                ⚠ Link girildiği için ISBN alanı devre dışı bırakıldı. ISBN ile devam etmek için önce link kutularını boşaltın.
+            </div>
+            <div style="margin-top:8px; font-size:12px; color:rgba(255,255,255,0.45);">
+                Bu "Getir" butonu internetten veri çekmez, sadece veritabanında bu ISBN'ye kayıtlı bir kitap olup olmadığına bakar.
+            </div>
+        </div>
+
+        <!-- KİTAP BİLGİLERİ -->
+        <div class="card" id="kitapBilgileriCard">
+            <h2>📘 Kitap Bilgileri</h2>
+            <div class="two-col">
+                <div class="col-left">
+                    <div class="image-preview" id="coverPreview">
+                        <span class="placeholder">Kapak Resmi</span>
+                    </div>
+                    <input type="text" class="url-input" id="coverUrl" placeholder="Kapak URL'si..." oninput="onCoverUrlChange()" />
+                </div>
+
+                <div class="col-right">
+                    <div class="form-group">
+                        <label>Kitap Adı</label>
+                        <input type="text" id="bookName" placeholder="Kitap adı..." />
+                    </div>
+
+                    <div class="form-group">
+                        <label>İlk Basım Yılı</label>
+                        <input type="number" id="firstPublishYear" placeholder="Örn: 1866" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Kitap Açıklaması</label>
+                        <textarea id="bookDescription" placeholder="Kitap hakkında kısa açıklama..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Seri</label>
+                        <div class="select-with-add">
+                            <select id="seriesSelect" onchange="checkSeriesOrderConflict()">
+                                <option value="">— Seri seçin —</option>
+                            </select>
+                            <button class="add-btn" onclick="popupAc('seri')" title="Yeni seri ekle">+</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Seri Sıralaması</label>
+                        <input type="number" id="seriesOrder" placeholder="Örn: 1" oninput="checkSeriesOrderConflict()" />
+                        <div class="field-warning" id="seriesOrderWarning"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tür (birden fazla seçebilirsiniz)</label>
+                        <div class="pill-group" id="genreSelect"></div>
+                    </div>
+
+                    <div class="two-input-row">
+                        <div class="form-group">
+                            <label>Sayfa Sayısı</label>
+                            <input type="number" id="pageCount" placeholder="Örn: 320" />
+                        </div>
+                        <div class="form-group">
+                            <label>Basım Yılı</label>
+                            <input type="number" id="publishYear" placeholder="Örn: 2023" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Yayınevi</label>
+                        <div class="select-with-add">
+                            <select id="publisherSelect">
+                                <option value="">— Yayınevi seçin —</option>
+                            </select>
+                            <button class="add-btn" onclick="popupAc('yayinevi')" title="Yeni yayınevi ekle">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ÇEVİRMEN -->
+        <div id="translatorsSection">
+            <div id="translatorsContainer"></div>
+            <button type="button" class="add-more-btn" id="cevirmenEkleBtn" onclick="cevirmenEkle()">➕ Çevirmen Ekle</button>
+        </div>
+
+        <!-- YAZAR -->
+        <div id="authorsContainer"></div>
+        <button type="button" class="add-more-btn" id="yazarEkleBtn" onclick="yazarEkle()">➕ Yazar Ekle</button>
+
+        <!-- KAYDET -->
+        <button class="save-btn" id="saveBtn" onclick="kaydet()">💾 Kaydet</button>
+
+    </div>
+
+    <!-- POPUP: Yeni Seri -->
+    <div class="popup-overlay" id="popupSeri">
+        <div class="popup-box">
+            <h3>Yeni Seri Ekle</h3>
+            <input type="text" id="yeniSeriAdi" placeholder="Seri adı..." />
+            <div class="popup-buttons">
+                <button class="btn-cancel" onclick="popupKapat('seri')">İptal</button>
+                <button class="btn-confirm" onclick="seriKaydet()">Ekle</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP: Yeni Yayınevi -->
+    <div class="popup-overlay" id="popupYayinevi">
+        <div class="popup-box">
+            <h3>Yeni Yayınevi Ekle</h3>
+            <input type="text" id="yeniYayineviAdi" placeholder="Yayınevi adı..." />
+            <div class="popup-buttons">
+                <button class="btn-cancel" onclick="popupKapat('yayinevi')">İptal</button>
+                <button class="btn-confirm" onclick="yayineviKaydet()">Ekle</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/js/admin/bookSave.js"></script>
+</body>
+</html>
