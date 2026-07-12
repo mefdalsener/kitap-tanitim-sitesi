@@ -8,6 +8,28 @@
     <meta charset="utf-8" />
     <title>@ViewData["Title"]</title>
     <link rel="stylesheet" href="~/css/admin-panel.css" />
+    <!--
+        SAYFA TEMASI — Kitap Ekle (yeşil).
+        admin-panel.css'teki .admin-header / .card / .popup-box için ortak lacivert
+        gradient burada eziliyor (override). Admin Index'teki yeşil "Kitap Ekle"
+        kartıyla aynı renk ailesi kullanılıyor, ama orijinal lacivert temayla aynı
+        koyuluk/parlaklık seviyesinde tutuluyor — böylece card içindeki düşük
+        opaklıklı (rgba(255,255,255,0.4-0.7)) etiket/placeholder yazıları da
+        okunabilir kalıyor. Kaydet/Getir gibi işlem butonlarının yeşili kasıtlı
+        olarak DEĞİŞTİRİLMEDİ — o renk tema değil, site genelinde tutarlı bir
+        "aksiyon/onay" rengi.
+    -->
+    <style>
+            .admin-header {
+                background: linear-gradient(135deg, #0d2b21 0%, #1a5c3d 100%);
+                box-shadow: 0 2px 12px rgba(13,43,33,0.35);
+            }
+
+            .card,
+            .popup-box {
+                background: linear-gradient(135deg, #0d2b21 0%, #1a5c3d 100%);
+            }
+    </style>
 </head>
 <body>
     <div class="admin-header">Admin Paneli — Kitap Ekle</div>

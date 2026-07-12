@@ -8,6 +8,26 @@
     <meta charset="utf-8" />
     <title>@ViewData["Title"]</title>
     <link rel="stylesheet" href="~/css/admin-panel.css" />
+    <!--
+        SAYFA TEMASI — Kitap Düzenle (turuncu).
+        Admin Index'teki turuncu kart (f2994a→f2c94c) çok açık/sarıya yakın bir
+        gradient — bunu doğrudan .card arka planına uygularsak düşük opaklıklı
+        beyaz yazılar (placeholder, ipucu metinleri vb.) okunmaz hâle gelirdi.
+        Bunun yerine aynı turuncu renk ailesinden, orijinal lacivert temayla aynı
+        koyuluk seviyesinde bir varyant kullanılıyor. Kaydet/Güncelle butonundaki
+        mavi (edit-mode) ve Getir'deki yeşil kasıtlı olarak değiştirilmedi.
+    -->
+    <style>
+            .admin-header {
+                background: linear-gradient(135deg, #3a2210 0%, #8a4a12 100%);
+                box-shadow: 0 2px 12px rgba(58,34,16,0.35);
+            }
+
+            .card,
+            .popup-box {
+                background: linear-gradient(135deg, #3a2210 0%, #8a4a12 100%);
+            }
+    </style>
 </head>
 <body>
     <div class="admin-header">Admin Paneli — Kitap Düzenleme</div>

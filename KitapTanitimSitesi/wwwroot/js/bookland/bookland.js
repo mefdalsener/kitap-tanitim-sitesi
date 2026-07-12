@@ -527,7 +527,7 @@ function popupAc(kitap, push) {
 
 function kitapDuzenle() {
 	if (!aktifKitapId) return;
-	window.open("/Admin/Index?bookId=" + aktifKitapId, "_blank");
+	window.open("/Admin/BookUpdate?bookId=" + aktifKitapId, "_blank");
 }
 function popupKapat(push) {
 	document.getElementById("kitap-popup-overlay").classList.remove("aktif");
@@ -613,7 +613,7 @@ function yazarPopupAc(yazar, push) {
 
 function yazarDuzenle() {
 	if (!aktifYazarId) return;
-	window.open("/Admin/Index?authorId=" + aktifYazarId, "_blank");
+	window.open("/Admin/AuthorUpdate?authorId=" + aktifYazarId, "_blank");
 }
 
 function yazarPopupKapat(push) {

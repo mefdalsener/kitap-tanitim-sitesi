@@ -127,7 +127,7 @@
 					<div class="kullanici-menu" id="kullanici-menu">
 						@if (User.IsInRole("admin"))
 						{
-							<a href="https://localhost:7129/admin/" class="kullanici-menu-item">Admin Paneli</a>
+							<a href="https://localhost:7129/Admin/" class="kullanici-menu-item">Admin Paneli</a>
 						}
 						<form asp-controller="Account" asp-action="Logout" method="post">
 							@Html.AntiForgeryToken()

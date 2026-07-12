@@ -8,6 +8,24 @@
 	<meta charset="utf-8" />
 	<title>@ViewData["Title"]</title>
 	<link rel="stylesheet" href="~/css/admin-panel.css" />
+	<!--
+		SAYFA TEMASI — Yazar Düzenle (mavi).
+		Admin Index'teki mavi kartla (2193b0→6dd5ed) aynı renk ailesi, ama açık ucu
+		(6dd5ed) çok açık bir camgöbeği olduğu için doğrudan kullanılmadı — koyuluk
+		seviyesi orijinal lacivert temayla eşleştirildi ki düşük opaklıklı beyaz
+		yazılar okunabilir kalsın.
+	-->
+	<style>
+			.admin-header {
+				background: linear-gradient(135deg, #0d2733 0%, #1a5f78 100%);
+				box-shadow: 0 2px 12px rgba(13,39,51,0.35);
+			}
+
+			.card,
+			.popup-box {
+				background: linear-gradient(135deg, #0d2733 0%, #1a5f78 100%);
+			}
+	</style>
 </head>
 <body>
 	<!-- Bu sayfa her zaman düzenleme modundadır — AdminIndex'teki gibi

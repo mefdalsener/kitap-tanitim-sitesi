@@ -542,6 +542,151 @@ namespace KitapTanitimSitesi.Controllers
                 return Json(new { error = ex.Message });
             }
         }
+        public IActionResult SeriesEdit()
+        {
+            return View();
+        }
+
+        // ---- YENİ: Bir seriye ait kitapları SeriesOrder'a göre artan sırayla,
+        // kapak + yazar isimleriyle birlikte döner ----
+        [HttpGet]
+        public async Task<IActionResult> GetBooksInSeries(int seriesId, [FromServices] AppDbContext db)
+        {
+            try
+            {
+                var books = await db.Books
+                    .Where(b => b.SeriesID == seriesId)
+                    .Include(b => b.BookAuthors).ThenInclude(ba => ba.Author)
+                    .OrderBy(b => b.SeriesOrder)
+                    .ToListAsync();
+
+                var result = books.Select(b => new
+                {
+                    bookId = b.BookID,
+                    bookName = b.BookName,
+                    bookCoverImageUrl = b.BookCoverImage_URL,
+                    seriesOrder = b.SeriesOrder,
+                    authorNames = string.Join(", ", b.BookAuthors.Select(ba => $"{ba.Author.AuthorName} {ba.Author.AuthorSurname}"))
+                }).ToList();
+
+                return Json(new { books = result });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        // ---- YENİ: Hiçbir seriye ait olmayan kitapları döner
+        // ("Seriye Yeni Kitap Ekle" select'i için — DB tek SeriesID/SeriesOrder
+        // kullandığından, bir kitap zaten bir seride ise başka bir seriye
+        // kazara taşınmasın diye bu listeye hiç girmiyor) ----
+        [HttpGet]
+        public async Task<IActionResult> GetUnassignedBooks([FromServices] AppDbContext db)
+        {
+            try
+            {
+                var books = await db.Books
+                    .Where(b => b.SeriesID == null)
+                    .OrderBy(b => b.BookName)
+                    .Select(b => new { id = b.BookID, name = b.BookName })
+                    .ToListAsync();
+
+                return Json(new { books });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        // ---- YENİ: Bir seri içindeki kitapların SeriesOrder değerlerini toplu günceller.
+        // Client zaten aynı işi kontrol ediyor, ama server-side tekrar doğrulamak
+        // (örn. iki farklı tarayıcıdan aynı anda kaydetme ihtimaline karşı) zorunlu
+        // bir güvenlik ağı — SaveBook'taki mevcut çakışma kontrolüyle aynı mantık. ----
+        [HttpPost]
+        public async Task<IActionResult> UpdateSeriesOrders([FromBody] UpdateSeriesOrdersRequest req, [FromServices] AppDbContext db)
+        {
+            using var transaction = await db.Database.BeginTransactionAsync();
+            try
+            {
+                if (req == null || req.SeriesId <= 0 || req.Items == null || req.Items.Count == 0)
+                    return Json(new { error = "Geçersiz istek." });
+
+                // Aynı seri içinde gönderilen öğeler arasında sıra çakışması var mı?
+                var duplicateOrder = req.Items
+                    .Where(i => i.SeriesOrder.HasValue)
+                    .GroupBy(i => i.SeriesOrder.Value)
+                    .FirstOrDefault(g => g.Count() > 1);
+
+                if (duplicateOrder != null)
+                    return Json(new { error = $"Aynı sıra numarasından ({duplicateOrder.Key}) birden fazla var. Lütfen birini değiştirip tekrar deneyin." });
+
+                var bookIds = req.Items.Select(i => i.BookId).ToList();
+                var books = await db.Books
+                    .Where(b => bookIds.Contains(b.BookID) && b.SeriesID == req.SeriesId)
+                    .ToListAsync();
+
+                if (books.Count != req.Items.Count)
+                    return Json(new { error = "Kitaplardan biri artık bu seride değil. Sayfayı yenileyip tekrar deneyin." });
+
+                foreach (var item in req.Items)
+                {
+                    var book = books.First(b => b.BookID == item.BookId);
+                    book.SeriesOrder = item.SeriesOrder;
+                }
+
+                await db.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        // ---- YENİ: Var olan (henüz hiçbir seride olmayan) bir kitabı bir seriye bağlar ----
+        [HttpPost]
+        public async Task<IActionResult> AddBookToSeries([FromBody] AddBookToSeriesRequest req, [FromServices] AppDbContext db)
+        {
+            try
+            {
+                if (req == null || req.BookId <= 0 || req.SeriesId <= 0)
+                    return Json(new { error = "Kitap ve seri seçilmeli." });
+
+                var book = await db.Books.FindAsync(req.BookId);
+                if (book == null)
+                    return Json(new { error = "Kitap bulunamadı." });
+
+                if (book.SeriesID.HasValue)
+                    return Json(new { error = "Bu kitap zaten bir seriye ait. Önce başka bir seriden çıkarılmalı." });
+
+                var seriesExists = await db.Series.AnyAsync(s => s.SeriesID == req.SeriesId);
+                if (!seriesExists)
+                    return Json(new { error = "Seri bulunamadı." });
+
+                if (req.SeriesOrder.HasValue)
+                {
+                    var conflict = await db.Books.FirstOrDefaultAsync(b =>
+                        b.SeriesID == req.SeriesId && b.SeriesOrder == req.SeriesOrder.Value);
+                    if (conflict != null)
+                        return Json(new { error = $"Bu seride {req.SeriesOrder}. sırada zaten \"{conflict.BookName}\" adlı kitap kayıtlı." });
+                }
+
+                book.SeriesID = req.SeriesId;
+                book.SeriesOrder = req.SeriesOrder;
+                await db.SaveChangesAsync();
+
+                return Json(new { success = true, bookId = book.BookID });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
     }
 
     // ---- YENİ EKLENEN REQUEST MODELİ ----
@@ -567,5 +712,23 @@ namespace KitapTanitimSitesi.Controllers
         public string ImageUrl { get; set; }
         public int? BirthYear { get; set; }
         public int? DeathYear { get; set; }
+    }
+    public class UpdateSeriesOrdersRequest
+    {
+        public int SeriesId { get; set; }
+        public List<SeriesOrderItem> Items { get; set; }
+    }
+
+    public class SeriesOrderItem
+    {
+        public int BookId { get; set; }
+        public int? SeriesOrder { get; set; }
+    }
+
+    public class AddBookToSeriesRequest
+    {
+        public int BookId { get; set; }
+        public int SeriesId { get; set; }
+        public int? SeriesOrder { get; set; }
     }
 }

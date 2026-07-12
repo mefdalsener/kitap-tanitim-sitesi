@@ -1,0 +1,213 @@
+﻿@{
+    ViewData["Title"] = "Seri Yönetimi";
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/css/admin-panel.css" />
+    <!--
+        Aşağıdaki stiller SADECE bu sayfaya özgü (yatay kitap şeridi görünümü).
+        admin-panel.css'e yeni sınıf eklemek yerine burada tutuluyor — o dosyanın
+        gerçek içeriğini görmediğimizden, orada isim çakışması riskini almamak için.
+    -->
+    <style>
+            /* ---- SAYFA TEMASI — Seri Düzenle (mor).
+                                   Admin Index'teki mor kartla (8e2de2→e056fd) aynı renk ailesi,
+                                   ama okunabilirlik için orijinal lacivert temayla aynı koyuluk
+                                   seviyesinde tutuluyor. ---- */
+            .admin-header {
+                background: linear-gradient(135deg, #2a1044 0%, #5a2296 100%);
+                box-shadow: 0 2px 12px rgba(42,16,68,0.35);
+            }
+
+            .card,
+            .popup-box {
+                background: linear-gradient(135deg, #2a1044 0%, #5a2296 100%);
+            }
+
+            .series-strip {
+                display: flex;
+                align-items: center;
+                gap: 18px;
+                background: rgba(255,255,255,0.06);
+                border: 1px solid rgba(255,255,255,0.15);
+                border-radius: 10px;
+                padding: 12px 16px;
+                margin-bottom: 10px;
+            }
+
+            .series-strip-cover {
+                width: 52px;
+                height: 78px;
+                flex-shrink: 0;
+                border-radius: 6px;
+                overflow: hidden;
+                background: rgba(255,255,255,0.08);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+                .series-strip-cover img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+
+                .series-strip-cover .placeholder {
+                    font-size: 10px;
+                    color: rgba(255,255,255,0.4);
+                    text-align: center;
+                }
+
+            .series-strip-info {
+                flex: 1;
+                min-width: 0;
+            }
+
+                .series-strip-info .kitap-adi {
+                    color: white;
+                    font-weight: 700;
+                    font-size: 15px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .series-strip-info .yazar-adi {
+                    color: rgba(255,255,255,0.6);
+                    font-size: 13px;
+                    margin-top: 2px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+            .series-strip-order {
+                width: 70px;
+                flex-shrink: 0;
+            }
+
+                .series-strip-order input {
+                    width: 100%;
+                    padding: 9px 10px;
+                    border: 1px solid rgba(255,255,255,0.2);
+                    border-radius: 8px;
+                    font-size: 14px;
+                    text-align: center;
+                    background: rgba(255,255,255,0.08);
+                    color: white;
+                }
+
+                    .series-strip-order input:focus {
+                        outline: none;
+                        background: rgba(255,255,255,0.14);
+                        border-color: #4caf50;
+                    }
+
+            .series-empty-hint {
+                color: rgba(255,255,255,0.5);
+                font-size: 13px;
+                padding: 8px 2px;
+            }
+
+            .series-select-row {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+
+                .series-select-row select {
+                    flex: 1;
+                }
+
+            .secondary-btn {
+                padding: 12px 20px;
+                background: rgba(255,255,255,0.1);
+                color: white;
+                border: 1px solid rgba(255,255,255,0.25);
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: bold;
+                cursor: pointer;
+                white-space: nowrap;
+            }
+
+                .secondary-btn:hover {
+                    background: rgba(255,255,255,0.18);
+                }
+    </style>
+</head>
+<body>
+    <div class="admin-header">Admin Paneli — Seri Yönetimi</div>
+
+    <div class="admin-body">
+
+        <!-- SERİ SEÇİMİ -->
+        <div class="card">
+            <h2>📚 Seri Seç</h2>
+            <div class="form-group">
+                <label>Yönetilecek Seri</label>
+                <div class="series-select-row">
+                    <select id="seriesSelect">
+                        <option value="">— Seri seçin —</option>
+                    </select>
+                    <button type="button" class="secondary-btn" onclick="popupAc('yeniSeri')">➕ Yeni Seri Ekle</button>
+                    <button type="button" class="getir-btn" id="getirBtn" onclick="seriGetir()">
+                        <span class="btn-label">⬇ Getir</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- KİTAP LİSTESİ -->
+        <div class="card" id="kitapListesiCard" style="display:none;">
+            <h2>📖 Seri İçindeki Kitaplar</h2>
+            <div id="kitapListesi"></div>
+            <div class="field-warning" id="siraWarning"></div>
+
+            <button type="button" class="add-more-btn" id="seriyeKitapEkleBtn" onclick="popupAc('kitapEkle')">➕ Seriye Yeni Kitap Ekle</button>
+            <button class="save-btn" id="onayBtn" onclick="onayla()">✔ Onay</button>
+        </div>
+
+    </div>
+
+    <!-- POPUP: Yeni Seri Ekle -->
+    <div class="popup-overlay" id="popupYeniSeri">
+        <div class="popup-box">
+            <h3>Yeni Seri Ekle</h3>
+            <input type="text" id="yeniSeriAdi" placeholder="Seri adı..." />
+            <div class="popup-buttons">
+                <button class="btn-cancel" onclick="popupKapat('yeniSeri')">İptal</button>
+                <button class="btn-confirm" onclick="yeniSeriKaydet()">Ekle</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP: Seriye Yeni Kitap Ekle -->
+    <div class="popup-overlay" id="popupKitapEkle">
+        <div class="popup-box">
+            <h3>Seriye Yeni Kitap Ekle</h3>
+            <div class="form-group">
+                <label>Kitap Seç</label>
+                <select id="unassignedBookSelect">
+                    <option value="">— Kitap seçin —</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Sıra Numarası (Series Order)</label>
+                <input type="number" id="yeniKitapSirasi" placeholder="Örn: 3" />
+            </div>
+            <div class="popup-buttons">
+                <button class="btn-cancel" onclick="popupKapat('kitapEkle')">İptal</button>
+                <button class="btn-confirm" onclick="kitapEkleOnayla()">Onayla</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/js/admin/seriesEdit.js"></script>
+</body>
+</html>
