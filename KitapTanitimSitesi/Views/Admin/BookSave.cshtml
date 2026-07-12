@@ -34,6 +34,83 @@
             .header-icon-link {
                 color: #1a5c3d;
             }
+
+            /* ISBN zaten kayıtlı UYARI POPUP'I — arka plan .popup-box ile aynı (yukarıdaki
+                           gradient override'ı otomatik alır), sadece overlay + kutu boyutlandırması burada. */
+            .isbn-uyari-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.6);
+                z-index: 999;
+                align-items: center;
+                justify-content: center;
+            }
+
+                .isbn-uyari-overlay.active {
+                    display: flex;
+                }
+
+            .isbn-uyari-box {
+                max-width: 460px;
+                width: 90%;
+                padding: 26px 28px;
+                border-radius: 14px;
+                box-shadow: 0 10px 36px rgba(0,0,0,0.5);
+                position: relative;
+                color: #fff;
+            }
+
+                .isbn-uyari-box h2 {
+                    margin: 0 0 10px 0;
+                    font-size: 19px;
+                    color: #ffb74d;
+                }
+
+                .isbn-uyari-box p {
+                    margin: 0 0 10px 0;
+                    line-height: 1.6;
+                    font-size: 14px;
+                    color: rgba(255,255,255,0.85);
+                }
+
+            .isbn-uyari-mesaj {
+                background: rgba(255,255,255,0.08);
+                border-left: 3px solid #ffb74d;
+                padding: 10px 12px;
+                border-radius: 6px;
+                font-size: 13.5px;
+                line-height: 1.6;
+            }
+
+                .isbn-uyari-mesaj a {
+                    color: #90caf9;
+                    text-decoration: underline;
+                    font-weight: 600;
+                }
+
+            .isbn-uyari-actions {
+                margin-top: 20px;
+                display: flex;
+                gap: 10px;
+                justify-content: flex-end;
+            }
+
+            .isbn-uyari-close {
+                position: absolute;
+                top: 8px;
+                right: 12px;
+                background: none;
+                border: none;
+                color: rgba(255,255,255,0.6);
+                font-size: 20px;
+                line-height: 1;
+                cursor: pointer;
+            }
+
+                .isbn-uyari-close:hover {
+                    color: #fff;
+                }
     </style>
 </head>
 <body>
@@ -53,12 +130,12 @@
 
             <div class="scrape-input-group">
                 <label>Kitapyurdu Linki</label>
-                <input type="text" id="kitapyurduUrl" placeholder="https://www.kitapyurdu.com/kitap/..." oninput="updateExclusivity()" />
+                <input type="text" id="kitapyurduUrl" placeholder="https://www.kitapyurdu.com/kitap/..." />
             </div>
 
             <div class="scrape-input-group">
                 <label>Goodreads Linki</label>
-                <input type="text" id="goodreadsUrl" placeholder="https://www.goodreads.com/book/show/..." oninput="updateExclusivity()" />
+                <input type="text" id="goodreadsUrl" placeholder="https://www.goodreads.com/book/show/..." />
             </div>
 
             <div class="scrape-bottom-row">
@@ -66,56 +143,54 @@
                     <span class="spinner"></span>
                     <span class="btn-label">⬇ Getir</span>
                 </button>
-                <button type="button" class="getir-btn" id="linkTemizleBtn" style="background:#555;" onclick="linkleriTemizle()" title="Link kutularını temizle ve ISBN moduna hızlı geç">
+                <button type="button" class="getir-btn" id="linkTemizleBtn" style="background:#555;" onclick="linkleriTemizle()" title="Link kutularını ve doldurulan ISBN'i temizle">
                     <span class="btn-label">✕ Temizle</span>
                 </button>
             </div>
 
             <span id="getirDurum"></span>
             <div id="eslesmeSonuclari" style="margin-top:8px; font-size:13px; color:#81c784; line-height:1.6;"></div>
-            <div class="exclusivity-note" id="linkExclusivityNote">
-                ⚠ ISBN girildiği için link alanları devre dışı bırakıldı. Link ile devam etmek için önce ISBN kutusunu boşaltın.
-            </div>
-        </div>
 
-        <!-- ISBN KARTI (BookSave'e özgü — partial'da DEĞİL) -->
-        <div class="card" id="isbnCard">
-            <h2>📖 ISBN</h2>
-            <div class="scrape-bottom-row">
-                <div class="scrape-isbn-group">
-                    <label>ISBN</label>
-                    <input type="text" id="isbnInput" placeholder="ISBN girin..." oninput="onIsbnInputChange()" />
-                </div>
-                <button class="getir-btn" id="isbnGetirBtn" onclick="isbnGetir()">
-                    <span class="spinner"></span>
-                    <span class="btn-label">🔎 Getir</span>
-                </button>
-                <button type="button" class="getir-btn" style="background:#555;" onclick="isbnTemizle()" title="ISBN kutusunu temizle ve link moduna hızlı geç">
-                    <span class="btn-label">✕ Temizle</span>
-                </button>
+            <!-- ISBN artık elle girilip aranmıyor — sadece link ile "Getir" sonucunda otomatik dolar. -->
+            <div class="scrape-isbn-group" style="margin-top:14px;">
+                <label>ISBN</label>
+                <input type="text" id="isbnInput" placeholder="Linkten otomatik doldurulur..." readonly />
             </div>
-            <span id="isbnDurum" style="display:block; margin-top:12px; font-size:13px; color:rgba(255,255,255,0.75); min-height:18px;"></span>
-            <div class="exclusivity-note" id="isbnExclusivityNote">
-                ⚠ Link girildiği için ISBN alanı devre dışı bırakıldı. ISBN ile devam etmek için önce link kutularını boşaltın.
-            </div>
-            <div style="margin-top:8px; font-size:12px; color:rgba(255,255,255,0.45);">
-                Bu "Getir" butonu internetten veri çekmez, sadece veritabanında bu ISBN'ye kayıtlı bir kitap olup olmadığına bakar.
-            </div>
+            <span id="isbnDurum" style="display:block; margin-top:8px; font-size:13px; color:rgba(255,255,255,0.75); min-height:18px;"></span>
         </div>
 
         <!-- ORTAK FORM GÖVDESİ (kitap bilgileri, çevirmen, yazar, popup'lar) -->
-        @await Html.PartialAsync("_BookFormPartial")
+        <!-- ISBN veritabanında zaten kayıtlıysa bookFormArea içindeki TÜM alanlar ve Kaydet butonu kilitlenir. -->
+        <div id="bookFormArea">
+            @await Html.PartialAsync("_BookFormPartial")
 
-        <!-- KAYDET (her sayfa kendi metnini/id'sini kendi .cshtml'inde tutar) -->
-        <button class="save-btn" id="saveBtn" onclick="kaydet()">💾 Kaydet</button>
+            <!-- KAYDET (her sayfa kendi metnini/id'sini kendi .cshtml'inde tutar) -->
+            <button class="save-btn" id="saveBtn" onclick="kaydet()">💾 Kaydet</button>
+        </div>
 
+    </div>
+
+    <!-- ISBN zaten kayıtlı UYARI POPUP'I -->
+    <div class="isbn-uyari-overlay" id="isbnUyariOverlay">
+        <div class="card isbn-uyari-box" id="isbnUyariBox">
+            <button type="button" class="isbn-uyari-close" onclick="isbnUyariKapat()" title="Kapat">✕</button>
+            <h2>⚠ Bu kitap zaten var.</h2>
+            <p>İsterseniz düzenleyebilirsiniz:</p>
+            <div class="isbn-uyari-mesaj" id="isbnUyariMesaj"></div>
+            <div class="isbn-uyari-actions">
+                <button type="button" class="getir-btn" style="background:#555;" onclick="isbnUyariTemizle()">
+                    <span class="btn-label">✕ Temizle</span>
+                </button>
+                <a id="isbnUyariLink" href="#" class="save-btn" style="text-decoration:none; display:inline-flex; align-items:center;">Düzenlemeye Git</a>
+            </div>
+        </div>
     </div>
 
     <!--
         Script yükleme sırası KRİTİK: bookFormCommon.js önce gelmeli, çünkü
         _BookFormPartial'daki onclick/onchange handler'ları (popupAc, cevirmenEkle,
         yazarEkle, checkSeriesOrderConflict, onCoverUrlChange...) o dosyada tanımlı.
-        bookSave.js ise sadece bu sayfaya özgü fonksiyonları (getirVeDoldur, isbnGetir,
+        bookSave.js ise sadece bu sayfaya özgü fonksiyonları (getirVeDoldur, isbnKayitliKontrolEt,
         kaydet, resetForm) içerir ve bookFormCommon.js'teki fonksiyonlara bağımlıdır.
     -->
     <script src="~/js/admin/bookFormCommon.js"></script>

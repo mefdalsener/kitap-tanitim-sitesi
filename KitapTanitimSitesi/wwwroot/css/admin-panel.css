@@ -548,6 +548,47 @@ body {
             border-color: #4caf50;
         }
 
+    /* ---- POPUP İÇİ form-group (Kitap Seç / Sıra Numarası gibi label'lar) ----
+   .popup-box bir .card değil, bu yüzden .card .form-group label kuralları
+   buraya uygulanmıyordu ve label'lar varsayılan koyu renkte kalıp
+   koyu mor arka planda okunmuyordu. */
+    .popup-box .form-group {
+        margin-bottom: 14px;
+    }
+
+        .popup-box .form-group label {
+            display: block;
+            font-size: 12px;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 6px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+    /* ---- POPUP İÇİ select — genişlik tanımlanmadığı için tarayıcı
+   varsayılan genişliğini kullanıp popup-box dışına taşıyordu. ---- */
+    .popup-box select {
+        width: 100%;
+        padding: 11px 14px;
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: Arial, sans-serif;
+        background: rgba(255,255,255,0.08);
+        color: white;
+    }
+
+        .popup-box select:focus {
+            outline: none;
+            background: rgba(255,255,255,0.14);
+            border-color: #4caf50;
+        }
+
+        .popup-box select option {
+            background: #1a1a2e;
+            color: white;
+        }
+
 .popup-buttons {
     display: flex;
     gap: 10px;

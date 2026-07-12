@@ -187,7 +187,8 @@ namespace KitapTanitimSitesi.Controllers
                 else
                 {
                     // Yeni kitap eklenirken bu ISBN zaten kayıtlıysa, yanlışlıkla ikinci bir
-                    // kayıt oluşturulmasın — kullanıcıyı ISBN'den "Getir" akışına yönlendir.
+                    // kayıt oluşturulmasın. Bu durum normalde frontend'de "Getir" sonrası otomatik
+                    // ISBN kontrolüyle yakalanıp form kilitleniyor; burası ona ek bir güvenlik ağı.
                     var isbnToCheck = req.BookPublisher?.Isbn?.Trim();
                     if (!string.IsNullOrWhiteSpace(isbnToCheck))
                     {
@@ -196,7 +197,7 @@ namespace KitapTanitimSitesi.Controllers
                         {
                             return Json(new
                             {
-                                error = $"Bu ISBN ({isbnToCheck}) veritabanında zaten kayıtlı. Yeni kitap olarak eklenemez — lütfen yukarıdaki ISBN kutusundan \"Getir\" ile kitabı çekip güncelleyin."
+                                error = $"Bu ISBN ({isbnToCheck}) veritabanında zaten kayıtlı. Yeni kitap olarak eklenemez — düzenlemek için ilgili kitabın güncelleme sayfasına gidin."
                             });
                         }
                     }

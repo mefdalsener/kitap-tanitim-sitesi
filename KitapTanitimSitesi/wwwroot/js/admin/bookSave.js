@@ -11,88 +11,72 @@
 //   <script src="~/js/admin/bookSave.js"></script>
 //
 // Bu dosyada SADECE şunlar kalıyor (BookSave'e özgü oldukları için):
-//   - updateExclusivity / linkleriTemizle / isbnTemizle / onIsbnInputChange
-//     → scrapePaneli + isbnCard'ın karşılıklı dışlama mantığı (sadece bu sayfada var)
-//   - isbnGetir → ISBN ile DB kontrolü (sadece bilgilendirme, edit-mode'a geçmiyor)
+//   - linkleriTemizle → link kutularını ve otomatik dolan ISBN'i temizler
+//   - setFormDisabled → bookFormArea (kitap bilgileri + Kaydet dahil) kilitleme/açma
+//   - isbnKayitliKontrolEt → scrape'ten gelen ISBN veritabanında var mı kontrol eder,
+//     varsa formu kilitler ve düzenleme sayfasına link verir (ISBN artık elle girilip
+//     aranmıyor — sadece "Getir" ile linkten otomatik doluyor)
 //   - getirVeDoldur → Kitapyurdu/Goodreads scrape akışı
 //   - resetForm → kayıttan sonra formu sıfırlama (bu sayfaya özgü, "yeni ekleme" davranışı)
 //   - kaydet → payload'ı toplayıp /Admin/SaveBook'a POST atan, bookId'yi hep null gönderen akış
 //   - sayfa açılış çağrıları
 // ================================================================
 
-// ---- ISBN / Link alanları birbirini dışlar ----
-function updateExclusivity() {
-	const kyVal = document.getElementById('kitapyurduUrl').value.trim();
-	const grVal = document.getElementById('goodreadsUrl').value.trim();
-	const isbnVal = document.getElementById('isbnInput').value.trim();
-
-	const linkVarMi = !!(kyVal || grVal);
-	const isbnVarMi = !!isbnVal;
-
-	const isbnInput = document.getElementById('isbnInput');
-	const isbnGetirBtn = document.getElementById('isbnGetirBtn');
-	const kyInput = document.getElementById('kitapyurduUrl');
-	const grInput = document.getElementById('goodreadsUrl');
-	const linkGetirBtn = document.getElementById('getirBtn');
-	const isbnNote = document.getElementById('isbnExclusivityNote');
-	const linkNote = document.getElementById('linkExclusivityNote');
-
-	if (linkVarMi && !isbnVarMi) {
-		isbnInput.disabled = true;
-		isbnGetirBtn.disabled = true;
-		isbnNote.style.display = 'block';
-	} else {
-		isbnInput.disabled = false;
-		isbnGetirBtn.disabled = false;
-		isbnNote.style.display = 'none';
-	}
-
-	if (isbnVarMi && !linkVarMi) {
-		kyInput.disabled = true;
-		grInput.disabled = true;
-		linkGetirBtn.disabled = true;
-		linkNote.style.display = 'block';
-	} else {
-		kyInput.disabled = false;
-		grInput.disabled = false;
-		linkGetirBtn.disabled = false;
-		linkNote.style.display = 'none';
-	}
-}
-
-// ---- Link veya ISBN alanlarını tek tıkla temizleyip moda hızlı geçiş sağlar ----
+// ---- Link kutularını ve otomatik dolan ISBN'i temizleyip formu tekrar açar ----
 function linkleriTemizle() {
 	document.getElementById('kitapyurduUrl').value = '';
 	document.getElementById('goodreadsUrl').value = '';
-	updateExclusivity();
-}
-
-function isbnTemizle() {
 	document.getElementById('isbnInput').value = '';
 	document.getElementById('isbnDurum').textContent = '';
 	document.getElementById('isbnDurum').className = '';
-	updateExclusivity();
+	isbnUyariKapat();
+	setFormDisabled(false);
 }
 
-function onIsbnInputChange() {
-	updateExclusivity();
+// ---- bookFormArea içindeki TÜM alanları (Kaydet butonu dahil) kilitler/açar ----
+function setFormDisabled(disabled) {
+	document.querySelectorAll('#bookFormArea input, #bookFormArea select, #bookFormArea textarea, #bookFormArea button')
+		.forEach(el => el.disabled = disabled);
 }
 
-// ---- ISBN ile SADECE veritabanından kitap arama (internet çekme yok) ----
+// ---- ISBN zaten kayıtlı UYARI POPUP'ı ----
+function isbnUyariGoster(bookName, bookId) {
+	const mesajEl = document.getElementById('isbnUyariMesaj');
+	const linkEl = document.getElementById('isbnUyariLink');
+
+	mesajEl.innerHTML = `⚠ Bu ISBN'nin altında halihazırda şu kitap var: <b>${bookName}</b>.`;
+	linkEl.href = `/Admin/BookUpdate?bookId=${bookId}`;
+
+	document.getElementById('isbnUyariOverlay').classList.add('active');
+}
+
+function isbnUyariKapat() {
+	document.getElementById('isbnUyariOverlay').classList.remove('active');
+}
+
+// ---- Popup'taki "Temizle" — sadece popup'ı kapatmaz, çekilmiş olan kitapla
+// ilgili TÜM alanları (link/ISBN kutuları dahil bookFormArea'daki her şeyi) siler ----
+function isbnUyariTemizle() {
+	resetForm();
+}
+
+// ---- Scrape ile gelen ISBN veritabanında zaten kayıtlı mı kontrol eder ----
 // Bu sayfa saf ekleme sayfası olduğundan, ISBN zaten kayıtlıysa formu doldurup
-// edit-mode'a GEÇMİYORUZ — kullanıcıyı bilgilendirip duruyoruz. BookUpdate sayfası
-// hazır olunca (Faz 4), burada bookId'ye giden bir link/yönlendirme eklenecek.
-async function isbnGetir() {
+// edit-mode'a GEÇMİYORUZ — bookFormArea'yı (Kaydet dahil) kilitleyip kullanıcıyı
+// BookUpdate sayfasına yönlendiren bir link gösteriyoruz.
+async function isbnKayitliKontrolEt() {
 	const isbn = document.getElementById('isbnInput').value.trim();
 	const durum = document.getElementById('isbnDurum');
 
 	if (!isbn) {
-		alert('ISBN girmelisiniz.');
+		durum.className = '';
+		durum.textContent = '';
+		setFormDisabled(false);
 		return;
 	}
 
 	durum.className = '';
-	durum.textContent = 'Veritabanında aranıyor...';
+	durum.textContent = 'ISBN veritabanında kontrol ediliyor...';
 
 	try {
 		const res = await fetch('/Admin/GetBookByIsbn?isbn=' + encodeURIComponent(isbn));
@@ -101,21 +85,26 @@ async function isbnGetir() {
 		if (data.error) {
 			durum.className = 'error';
 			durum.textContent = 'Hata: ' + data.error;
+			setFormDisabled(false);
 			return;
 		}
 
 		if (!data.found) {
 			durum.className = '';
-			durum.textContent = 'Bu ISBN veritabanında kayıtlı değil. Yeni kitap olarak devam edebilirsiniz.';
+			durum.textContent = '';
+			setFormDisabled(false);
 			return;
 		}
 
 		durum.className = 'error';
-		durum.innerHTML = `⚠ Bu ISBN ("${data.book.bookName}") veritabanında zaten kayıtlı. ` +
-			`<a href="/Admin/BookUpdate?bookId=${data.bookId}" style="color:#90caf9; text-decoration:underline;">Düzenlemek için tıklayın</a>.`;
+		durum.innerHTML = `⚠ Bu ISBN'nin altında bu kitap var: <b>${data.book.bookName}</b>. ` +
+			`Bunu düzenlemek için <a href="/Admin/BookUpdate?bookId=${data.bookId}" style="color:#90caf9; text-decoration:underline;">şuraya gidin</a>.`;
+		setFormDisabled(true);
+		isbnUyariGoster(data.book.bookName, data.bookId);
 	} catch (err) {
 		durum.className = 'error';
 		durum.textContent = 'Bağlantı hatası: ' + err.message;
+		setFormDisabled(false);
 	}
 }
 
@@ -129,6 +118,9 @@ async function getirVeDoldur() {
 		alert('En az bir link girmelisiniz.');
 		return;
 	}
+
+	setFormDisabled(false); // önceki bir kayıtlı-ISBN kilidi varsa yeni denemeyle sıfırlanır
+	isbnUyariKapat();
 
 	btn.classList.add('loading');
 	btn.disabled = true;
@@ -250,14 +242,10 @@ async function getirVeDoldur() {
 		document.getElementById('pageCount').value = data.bookPublishers.pageCount || '';
 		document.getElementById('publishYear').value = data.bookPublishers.publishYear || '';
 		document.getElementById('isbnInput').value = data.bookPublishers.isbn || '';
-		updateExclusivity();
 
-		// Scrape'ten gelen ISBN veritabanında zaten kayıtlıysa kullanıcı ISBN kutusuna
-		// hiç dokunmadan bunu öğrenemiyordu (isbnGetir() sadece elle butona basılınca
-		// çalışıyordu). ISBN doluysa aynı DB kontrolünü burada da otomatik tetikliyoruz.
-		if (data.bookPublishers.isbn) {
-			await isbnGetir();
-		}
+		// ISBN artık elle girilip aranmıyor — linkten dolar dolmaz otomatik olarak
+		// veritabanında kayıtlı mı diye kontrol edilir. Kayıtlıysa form (Kaydet dahil) kilitlenir.
+		await isbnKayitliKontrolEt();
 
 		// ---- Genres ----
 
@@ -323,7 +311,8 @@ function resetForm() {
 	tumCevirmenPanelleriniSifirla();
 	tumYazarPanelleriniSifirla();
 
-	updateExclusivity();
+	isbnUyariKapat();
+	setFormDisabled(false);
 }
 
 async function kaydet() {
@@ -414,4 +403,4 @@ renderGenrePills();
 tumCevirmenPanelleriniSifirla();
 tumYazarPanelleriniSifirla();
 loadDropdownData();
-updateExclusivity();
+setFormDisabled(false);
