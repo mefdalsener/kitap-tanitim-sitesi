@@ -483,10 +483,15 @@ namespace KitapTanitimSitesi.Controllers
         }
         // ---- YENİ: Bağımsız "Yazar Düzenleme" sayfası (Faz 1 — admin-modular-pages) ----
         // authorId query string ile gelir (örn. /Admin/AuthorUpdate?authorId=5).
-        // Şimdilik server-side doğrulama yapmıyoruz — client zaten GetAuthorById ile
-        // kontrol ediyor. Server-side NotFound/redirect kontrolü Faz 5'te eklenecek.
-        public IActionResult AuthorUpdate(int authorId)
+        // Faz 5: server-side doğrulama eklendi.
+        // authorId=0 (parametre hiç gönderilmemiş) GEÇERLİ bir durumdur — bu sayfa
+        // "Yazar Seç" dropdown'ıyla authorId'siz de normal şekilde açılabiliyor (Faz 1),
+        // bu yüzden bu durumda uyarı göstermiyoruz. Uyarı sadece authorId VERİLMİŞ ama
+        // veritabanında yoksa (geçersiz/eski bir bağlantı) anlamlı.
+        public async Task<IActionResult> AuthorUpdate(int authorId, [FromServices] AppDbContext db)
         {
+            bool gecersizId = authorId > 0 && !await db.Authors.AnyAsync(a => a.AuthorID == authorId);
+            ViewData["KayitBulunamadi"] = gecersizId;
             return View();
         }
 
@@ -494,7 +499,16 @@ namespace KitapTanitimSitesi.Controllers
         {
             return View();
         }
-
+        // ---- YENİ: BookUpdate — var olan bir kitabı düzenleme sayfası (Faz 4) ----
+        // Faz 5: server-side doğrulama eklendi. Bu sayfa AuthorUpdate'in aksine bookId
+        // olmadan anlamlı kullanılamaz (dropdown ile kitap seçme yok) — bu yüzden bookId
+        // eksikse (0) ya da veritabanında yoksa HER DURUMDA uyarı gösteriyoruz.
+        public async Task<IActionResult> BookUpdate(int bookId, [FromServices] AppDbContext db)
+        {
+            bool kayitVarMi = bookId > 0 && await db.Books.AnyAsync(b => b.BookID == bookId);
+            ViewData["KayitBulunamadi"] = !kayitVarMi;
+            return View();
+        }
         // ---- YENİ EKLENEN: Bağımsız "Yazar Düzenleme" ekranından yazar güncelleme
         // (kitap/çevirmen/yayınevi bağlamı olmadan sadece Authors tablosunu günceller) ----
         [HttpPost]

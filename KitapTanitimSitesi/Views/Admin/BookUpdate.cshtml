@@ -1,0 +1,63 @@
+﻿@{
+    ViewData["Title"] = "Kitap Düzenle";
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/css/admin-panel.css" />
+</head>
+<body>
+    <div class="admin-header">Admin Paneli — Kitap Düzenleme</div>
+    <!-- KAYIT BULUNAMADI UYARISI — Faz 5 -->
+    <div class="popup-overlay @(ViewData["KayitBulunamadi"] is true ? "active" : "")" id="popupKayitBulunamadi">
+        <div class="popup-box">
+            <h3>⚠ Kitap Bulunamadı</h3>
+            <p style="color: rgba(255,255,255,0.8); font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+                Bu ID'de bir kitap bulunamadı. Bağlantı hatalı olabilir veya kitap silinmiş olabilir.
+            </p>
+            <div class="popup-buttons">
+                <button class="btn-confirm" onclick="kayitBulunamadiKapat()">Tamam</button>
+            </div>
+        </div>
+    </div>
+    <div class="admin-body">
+
+        <!--
+            ISBN KARTI — BookUpdate'e özgü, SADE hali.
+            BookSave'deki isbnCard'ın aksine "Getir/DB'de ara" butonu YOK, çünkü
+            hangi kitabın düzenlendiği zaten bookId ile belli. Bilinçli olarak
+            _BookFormPartial'a eklenmedi (bkz. yorum: partial'a eklemek BookSave'de
+            id="isbnInput" çakışmasına yol açardı).
+        -->
+        <div class="card" id="isbnCard">
+            <h2>📖 ISBN</h2>
+            <div class="form-group">
+                <label>ISBN</label>
+                <input type="text" id="isbnInput" placeholder="ISBN girin..." />
+            </div>
+        </div>
+
+        <!-- ORTAK FORM GÖVDESİ (kitap bilgileri, çevirmen, yazar, popup'lar) -->
+        @await Html.PartialAsync("_BookFormPartial")
+
+        <!-- GÜNCELLE — sabit metin, JS ile değiştirilmesine gerek yok (BookSave'deki gibi dinamik değil) -->
+        <button class="save-btn edit-mode" id="saveBtn" onclick="kaydet()">🔄 Güncelle</button>
+
+    </div>
+
+    <!--
+        Script yükleme sırası KRİTİK (BookSave.cshtml ile aynı gerekçe):
+        bookFormCommon.js önce, çünkü _BookFormPartial'daki onclick/onchange
+        handler'ları orada tanımlı. bookUpdate.js bu sayfaya özgü fonksiyonları
+        içerir ve bookFormCommon.js'e bağımlıdır.
+    -->
+    <script>
+            const kayitBulunamadiSunucuda = @Html.Raw(ViewData["KayitBulunamadi"] is true ? "true" : "false");
+    </script>
+    <script src="~/js/admin/bookFormCommon.js"></script>
+    <script src="~/js/admin/bookUpdate.js"></script>
+</body>
+</html>

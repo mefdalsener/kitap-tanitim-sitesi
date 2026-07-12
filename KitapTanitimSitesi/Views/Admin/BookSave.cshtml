@@ -14,7 +14,7 @@
 
     <div class="admin-body">
 
-        <!-- OTOMATİK VERİ ÇEKME KARTI -->
+        <!-- OTOMATİK VERİ ÇEKME KARTI (BookSave'e özgü — partial'da DEĞİL) -->
         <div class="card" id="scrapePaneli">
             <h2>🔗 Kitapyurdu ve Goodreads Linklerinden Otomatik Doldur</h2>
 
@@ -45,7 +45,7 @@
             </div>
         </div>
 
-        <!-- ISBN KARTI -->
+        <!-- ISBN KARTI (BookSave'e özgü — partial'da DEĞİL) -->
         <div class="card" id="isbnCard">
             <h2>📖 ISBN</h2>
             <div class="scrape-bottom-row">
@@ -70,117 +70,22 @@
             </div>
         </div>
 
-        <!-- KİTAP BİLGİLERİ -->
-        <div class="card" id="kitapBilgileriCard">
-            <h2>📘 Kitap Bilgileri</h2>
-            <div class="two-col">
-                <div class="col-left">
-                    <div class="image-preview" id="coverPreview">
-                        <span class="placeholder">Kapak Resmi</span>
-                    </div>
-                    <input type="text" class="url-input" id="coverUrl" placeholder="Kapak URL'si..." oninput="onCoverUrlChange()" />
-                </div>
+        <!-- ORTAK FORM GÖVDESİ (kitap bilgileri, çevirmen, yazar, popup'lar) -->
+        @await Html.PartialAsync("_BookFormPartial")
 
-                <div class="col-right">
-                    <div class="form-group">
-                        <label>Kitap Adı</label>
-                        <input type="text" id="bookName" placeholder="Kitap adı..." />
-                    </div>
-
-                    <div class="form-group">
-                        <label>İlk Basım Yılı</label>
-                        <input type="number" id="firstPublishYear" placeholder="Örn: 1866" />
-                    </div>
-
-                    <div class="form-group">
-                        <label>Kitap Açıklaması</label>
-                        <textarea id="bookDescription" placeholder="Kitap hakkında kısa açıklama..."></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Seri</label>
-                        <div class="select-with-add">
-                            <select id="seriesSelect" onchange="checkSeriesOrderConflict()">
-                                <option value="">— Seri seçin —</option>
-                            </select>
-                            <button class="add-btn" onclick="popupAc('seri')" title="Yeni seri ekle">+</button>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Seri Sıralaması</label>
-                        <input type="number" id="seriesOrder" placeholder="Örn: 1" oninput="checkSeriesOrderConflict()" />
-                        <div class="field-warning" id="seriesOrderWarning"></div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Tür (birden fazla seçebilirsiniz)</label>
-                        <div class="pill-group" id="genreSelect"></div>
-                    </div>
-
-                    <div class="two-input-row">
-                        <div class="form-group">
-                            <label>Sayfa Sayısı</label>
-                            <input type="number" id="pageCount" placeholder="Örn: 320" />
-                        </div>
-                        <div class="form-group">
-                            <label>Basım Yılı</label>
-                            <input type="number" id="publishYear" placeholder="Örn: 2023" />
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Yayınevi</label>
-                        <div class="select-with-add">
-                            <select id="publisherSelect">
-                                <option value="">— Yayınevi seçin —</option>
-                            </select>
-                            <button class="add-btn" onclick="popupAc('yayinevi')" title="Yeni yayınevi ekle">+</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ÇEVİRMEN -->
-        <div id="translatorsSection">
-            <div id="translatorsContainer"></div>
-            <button type="button" class="add-more-btn" id="cevirmenEkleBtn" onclick="cevirmenEkle()">➕ Çevirmen Ekle</button>
-        </div>
-
-        <!-- YAZAR -->
-        <div id="authorsContainer"></div>
-        <button type="button" class="add-more-btn" id="yazarEkleBtn" onclick="yazarEkle()">➕ Yazar Ekle</button>
-
-        <!-- KAYDET -->
+        <!-- KAYDET (her sayfa kendi metnini/id'sini kendi .cshtml'inde tutar) -->
         <button class="save-btn" id="saveBtn" onclick="kaydet()">💾 Kaydet</button>
 
     </div>
 
-    <!-- POPUP: Yeni Seri -->
-    <div class="popup-overlay" id="popupSeri">
-        <div class="popup-box">
-            <h3>Yeni Seri Ekle</h3>
-            <input type="text" id="yeniSeriAdi" placeholder="Seri adı..." />
-            <div class="popup-buttons">
-                <button class="btn-cancel" onclick="popupKapat('seri')">İptal</button>
-                <button class="btn-confirm" onclick="seriKaydet()">Ekle</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- POPUP: Yeni Yayınevi -->
-    <div class="popup-overlay" id="popupYayinevi">
-        <div class="popup-box">
-            <h3>Yeni Yayınevi Ekle</h3>
-            <input type="text" id="yeniYayineviAdi" placeholder="Yayınevi adı..." />
-            <div class="popup-buttons">
-                <button class="btn-cancel" onclick="popupKapat('yayinevi')">İptal</button>
-                <button class="btn-confirm" onclick="yayineviKaydet()">Ekle</button>
-            </div>
-        </div>
-    </div>
-
+    <!--
+        Script yükleme sırası KRİTİK: bookFormCommon.js önce gelmeli, çünkü
+        _BookFormPartial'daki onclick/onchange handler'ları (popupAc, cevirmenEkle,
+        yazarEkle, checkSeriesOrderConflict, onCoverUrlChange...) o dosyada tanımlı.
+        bookSave.js ise sadece bu sayfaya özgü fonksiyonları (getirVeDoldur, isbnGetir,
+        kaydet, resetForm) içerir ve bookFormCommon.js'teki fonksiyonlara bağımlıdır.
+    -->
+    <script src="~/js/admin/bookFormCommon.js"></script>
     <script src="~/js/admin/bookSave.js"></script>
 </body>
 </html>

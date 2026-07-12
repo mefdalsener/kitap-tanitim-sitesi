@@ -1,0 +1,125 @@
+﻿<!--
+    _BookFormPartial.cshtml
+    ------------------------
+    BookSave.cshtml VE BookUpdate.cshtml (Faz 4) tarafından ORTAK kullanılan form gövdesi.
+
+    BURAYA ALINANLAR:
+      - kitapBilgileriCard (kitap adı, açıklama, seri, tür, yayınevi, kapak vb.)
+      - translatorsSection (çoklu çevirmen panelleri)
+      - authorsContainer + "Yazar Ekle" butonu
+      - popupSeri / popupYayinevi
+
+    BİLEREK BURAYA ALINMAYANLAR (BookSave'e özgü kalır, BookUpdate'te hiç olmayacak):
+      - scrapePaneli (Kitapyurdu/Goodreads link kartı)
+      - isbnCard (ISBN ile DB arama kartı)
+      - saveBtn (her sayfa kendi metnini/id'sini/konumunu kendi .cshtml'inde tutar)
+
+    ÖNEMLİ: Bu partial'ı kullanan sayfa, "wwwroot/js/admin/bookFormCommon.js" dosyasını
+    kendine özel script'inden (bookSave.js / bookUpdate.js) ÖNCE yüklemek zorunda,
+    çünkü aşağıdaki onclick/onchange/oninput handler'ları o dosyada tanımlı.
+-->
+<!-- KİTAP BİLGİLERİ -->
+<div class="card" id="kitapBilgileriCard">
+    <h2>📘 Kitap Bilgileri</h2>
+    <div class="two-col">
+        <div class="col-left">
+            <div class="image-preview" id="coverPreview">
+                <span class="placeholder">Kapak Resmi</span>
+            </div>
+            <input type="text" class="url-input" id="coverUrl" placeholder="Kapak URL'si..." oninput="onCoverUrlChange()" />
+        </div>
+
+        <div class="col-right">
+            <div class="form-group">
+                <label>Kitap Adı</label>
+                <input type="text" id="bookName" placeholder="Kitap adı..." />
+            </div>
+
+            <div class="form-group">
+                <label>İlk Basım Yılı</label>
+                <input type="number" id="firstPublishYear" placeholder="Örn: 1866" />
+            </div>
+
+            <div class="form-group">
+                <label>Kitap Açıklaması</label>
+                <textarea id="bookDescription" placeholder="Kitap hakkında kısa açıklama..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Seri</label>
+                <div class="select-with-add">
+                    <select id="seriesSelect" onchange="checkSeriesOrderConflict()">
+                        <option value="">— Seri seçin —</option>
+                    </select>
+                    <button class="add-btn" onclick="popupAc('seri')" title="Yeni seri ekle">+</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Seri Sıralaması</label>
+                <input type="number" id="seriesOrder" placeholder="Örn: 1" oninput="checkSeriesOrderConflict()" />
+                <div class="field-warning" id="seriesOrderWarning"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Tür (birden fazla seçebilirsiniz)</label>
+                <div class="pill-group" id="genreSelect"></div>
+            </div>
+
+            <div class="two-input-row">
+                <div class="form-group">
+                    <label>Sayfa Sayısı</label>
+                    <input type="number" id="pageCount" placeholder="Örn: 320" />
+                </div>
+                <div class="form-group">
+                    <label>Basım Yılı</label>
+                    <input type="number" id="publishYear" placeholder="Örn: 2023" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Yayınevi</label>
+                <div class="select-with-add">
+                    <select id="publisherSelect">
+                        <option value="">— Yayınevi seçin —</option>
+                    </select>
+                    <button class="add-btn" onclick="popupAc('yayinevi')" title="Yeni yayınevi ekle">+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ÇEVİRMEN (çoklu çevirmen destekli) -->
+<div id="translatorsSection">
+    <div id="translatorsContainer"></div>
+    <button type="button" class="add-more-btn" id="cevirmenEkleBtn" onclick="cevirmenEkle()">➕ Çevirmen Ekle</button>
+</div>
+
+<!-- YAZAR (çoklu yazar destekli) -->
+<div id="authorsContainer"></div>
+<button type="button" class="add-more-btn" id="yazarEkleBtn" onclick="yazarEkle()">➕ Yazar Ekle</button>
+
+<!-- POPUP: Yeni Seri -->
+<div class="popup-overlay" id="popupSeri">
+    <div class="popup-box">
+        <h3>Yeni Seri Ekle</h3>
+        <input type="text" id="yeniSeriAdi" placeholder="Seri adı..." />
+        <div class="popup-buttons">
+            <button class="btn-cancel" onclick="popupKapat('seri')">İptal</button>
+            <button class="btn-confirm" onclick="seriKaydet()">Ekle</button>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP: Yeni Yayınevi -->
+<div class="popup-overlay" id="popupYayinevi">
+    <div class="popup-box">
+        <h3>Yeni Yayınevi Ekle</h3>
+        <input type="text" id="yeniYayineviAdi" placeholder="Yayınevi adı..." />
+        <div class="popup-buttons">
+            <button class="btn-cancel" onclick="popupKapat('yayinevi')">İptal</button>
+            <button class="btn-confirm" onclick="yayineviKaydet()">Ekle</button>
+        </div>
+    </div>
+</div>

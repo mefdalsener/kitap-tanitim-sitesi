@@ -14,7 +14,21 @@
 	     state-machine (editingAuthorId var mı yok mu, panel gizle/göster vb.)
 	     yok. Başlık sabit, buton her zaman "Güncelle". -->
 	<div class="admin-header">Admin Paneli — Yazar Düzenleme</div>
-
+	<!-- KAYIT BULUNAMADI UYARISI — Faz 5. ViewData["KayitBulunamadi"] true ise sayfa
+     render edilirken "active" class'ı ile birlikte gelir, JS'e ihtiyaç duymadan
+     ilk anda görünür. -->
+	<div class="popup-overlay @(ViewData["KayitBulunamadi"] is true ? "active" : "")" id="popupKayitBulunamadi">
+		<div class="popup-box">
+			<h3>⚠ Yazar Bulunamadı</h3>
+			<p style="color: rgba(255,255,255,0.8); font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+				Bu ID'de bir yazar bulunamadı. Bağlantı hatalı olabilir veya yazar silinmiş olabilir.
+				Aşağıdaki "Yazar Seç" listesinden geçerli bir yazar seçebilirsiniz.
+			</p>
+			<div class="popup-buttons">
+				<button class="btn-confirm" onclick="kayitBulunamadiKapat()">Tamam</button>
+			</div>
+		</div>
+	</div>
 	<div class="admin-body">
 
 		<!-- YAZAR SEÇ — admin authorId ezberlemek/aramak zorunda kalmasın diye
@@ -81,7 +95,12 @@
 		<button class="save-btn edit-mode" id="saveBtn" onclick="yazarGuncelle()">🔄 Güncelle</button>
 
 	</div>
-
+	<script>
+			// Faz 5: Controller'da hesaplanan server-side doğrulama sonucu, sayfa
+			// JS'inin fetch atmadan önce kontrol edebilmesi için buraya gömülür.
+			const kayitBulunamadiSunucuda = @Html.Raw(ViewData["KayitBulunamadi"] is true ? "true" : "false");
+	</script>
+	<script src="~/js/admin/authorUpdate.js"></script>
 	<script src="~/js/admin/authorUpdate.js"></script>
 </body>
 </html>

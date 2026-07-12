@@ -102,10 +102,20 @@ function authorSecildi() {
 	url.searchParams.set('authorId', author.id);
 	window.history.replaceState({}, '', url);
 }
+// ---- Faz 5: server-side "kayıt bulunamadı" uyarısı ----
+function kayitBulunamadiGoster() {
+	document.getElementById('popupKayitBulunamadi').classList.add('active');
+}
 
+function kayitBulunamadiKapat() {
+	document.getElementById('popupKayitBulunamadi').classList.remove('active');
+}
 // ---- Sayfa açılışında: yazar listesini GetSelectData'dan çek, dropdown'ı doldur,
 //      ?authorId=X varsa o yazarı otomatik seç ----
 async function sayfaYuklendi() {
+	if (typeof kayitBulunamadiSunucuda !== 'undefined' && kayitBulunamadiSunucuda) {
+		kayitBulunamadiGoster();
+	}
 	formuKilitle(true);
 
 	try {
