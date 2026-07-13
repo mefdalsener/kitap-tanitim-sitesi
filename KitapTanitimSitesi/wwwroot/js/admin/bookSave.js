@@ -205,7 +205,7 @@ async function getirVeDoldur() {
                 found = new Option(label, '');
                 publisherSelect.add(found);
             }
-            publisherSelect.value = found.value;
+            found.selected = true; 
         }
 
         // ---- Translators (çoklu) ----

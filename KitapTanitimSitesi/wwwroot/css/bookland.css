@@ -621,10 +621,11 @@ body {
     flex-grow: 1;
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
     grid-gap: 24px;
     padding: 24px;
     align-content: start;
+    justify-content: start;
 }
 
 .author-card {

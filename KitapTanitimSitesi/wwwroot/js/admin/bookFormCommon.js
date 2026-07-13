@@ -185,7 +185,6 @@ function renderTranslatorOptions() {
 		const currentVal = select.value;
 		select.innerHTML = '';
 		select.add(new Option('— Çevirmen seçin veya yeni çevirmen girin —', ''));
-		select.add(new Option('+ Yeni Çevirmen', 'yeni'));
 		sortedTranslators.forEach(t => select.add(new Option(toTitleCase(`${t.name} ${t.surname}`), t.id)));
 		if ([...select.options].some(o => o.value === currentVal)) {
 			select.value = currentVal;
@@ -199,7 +198,6 @@ function renderAuthorOptions() {
 		const currentVal = select.value;
 		select.innerHTML = '';
 		select.add(new Option('— Yazar seçin veya yeni yazar girin —', ''));
-		select.add(new Option('+ Yeni Yazar', 'yeni'));
 		sortedAuthors.forEach(a => select.add(new Option(toTitleCase(`${a.name} ${a.surname}`), a.id)));
 		if ([...select.options].some(o => o.value === currentVal)) {
 			select.value = currentVal;
@@ -223,7 +221,6 @@ function translatorPanelHtml(index) {
 		<label>Çevirmen Seç</label>
 		<select class="translatorSelect" id="translatorSelect_${index}" onchange="cevirmenSec(${index})">
 			<option value="">— Çevirmen seçin veya yeni çevirmen girin —</option>
-			<option value="yeni">+ Yeni Çevirmen</option>
 		</select>
 	</div>
 
@@ -252,7 +249,6 @@ function authorPanelHtml(index) {
 		<label>Yazar Seç</label>
 		<select class="authorSelect" id="authorSelect_${index}" onchange="yazarSec(${index})">
 			<option value="">— Yazar seçin veya yeni yazar girin —</option>
-			<option value="yeni">+ Yeni Yazar</option>
 		</select>
 	</div>
 

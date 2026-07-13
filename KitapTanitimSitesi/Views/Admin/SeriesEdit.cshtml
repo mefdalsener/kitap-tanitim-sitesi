@@ -16,9 +16,9 @@
     -->
     <style>
             /* ---- SAYFA TEMASI — Seri Düzenle (mor).
-                                               Admin Index'teki mor kartla (8e2de2→e056fd) aynı renk ailesi,
-                                               ama okunabilirlik için orijinal lacivert temayla aynı koyuluk
-                                               seviyesinde tutuluyor. ---- */
+                                                           Admin Index'teki mor kartla (8e2de2→e056fd) aynı renk ailesi,
+                                                           ama okunabilirlik için orijinal lacivert temayla aynı koyuluk
+                                                           seviyesinde tutuluyor. ---- */
             .admin-header {
                 background: linear-gradient(135deg, #2a1044 0%, #5a2296 100%);
                 box-shadow: 0 2px 12px rgba(42,16,68,0.35);
@@ -165,6 +165,17 @@
                     background: rgba(255,255,255,0.18);
                 }
 
+                .secondary-btn:disabled {
+                    background: rgba(255,255,255,0.04);
+                    color: rgba(255,255,255,0.3);
+                    border-color: rgba(255,255,255,0.08);
+                    cursor: not-allowed;
+                }
+
+                    .secondary-btn:disabled:hover {
+                        background: rgba(255,255,255,0.04);
+                    }
+
             .popup-message {
                 color: rgba(255,255,255,0.85);
                 font-size: 14px;
@@ -198,10 +209,11 @@
             <div class="form-group">
                 <label>Yönetilecek Seri</label>
                 <div class="series-select-row">
-                    <select id="seriesSelect">
+                    <select id="seriesSelect" onchange="seriSecimDegisti()">
                         <option value="">— Seri seçin —</option>
                     </select>
                     <button type="button" class="secondary-btn" onclick="popupAc('yeniSeri')">➕ Yeni Seri Ekle</button>
+                    <button type="button" class="secondary-btn" id="seriAdiDuzenleBtn" onclick="popupAc('seriAdiDuzenle')" disabled>✎ Adını Düzenle</button>
                     <button type="button" class="getir-btn" id="getirBtn" onclick="seriGetir()">
                         <span class="btn-label">⬇ Getir</span>
                     </button>
@@ -229,6 +241,18 @@
             <div class="popup-buttons">
                 <button class="btn-cancel" onclick="popupKapat('yeniSeri')">İptal</button>
                 <button class="btn-confirm" onclick="yeniSeriKaydet()">Ekle</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP: Seri Adını Düzenle -->
+    <div class="popup-overlay" id="popupSeriAdiDuzenle">
+        <div class="popup-box">
+            <h3>Seri Adını Düzenle</h3>
+            <input type="text" id="seriAdiDuzenleInput" placeholder="Yeni seri adı..." />
+            <div class="popup-buttons">
+                <button class="btn-cancel" onclick="popupKapat('seriAdiDuzenle')">İptal</button>
+                <button class="btn-confirm" onclick="seriAdiKaydet()">Kaydet</button>
             </div>
         </div>
     </div>

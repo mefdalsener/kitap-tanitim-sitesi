@@ -59,6 +59,14 @@ function popupAc(tip) {
 		}
 		kitapEklePopuHazirla();
 	}
+	if (tip === 'seriAdiDuzenle') {
+		if (!currentSeriesId) {
+			showTopNotice('Önce yukarıdan bir seri seçip "Getir" ile açmalısınız.', true);
+			return;
+		}
+		const seri = dbSeriesList.find(s => String(s.id) === String(currentSeriesId));
+		document.getElementById('seriAdiDuzenleInput').value = seri ? seri.name : '';
+	}
 	document.getElementById('popup' + tip.charAt(0).toUpperCase() + tip.slice(1)).classList.add('active');
 }
 
@@ -92,6 +100,12 @@ function renderSeriesSelect() {
 	}
 }
 
+// ---- Seri dropdown'ı değiştiğinde: "Adını Düzenle" butonu tekrar pasif olur —
+//      kullanıcı "Getir"e basıp seçimi teyit etmeden yanlış seriyi düzenlemesin ----
+function seriSecimDegisti() {
+	document.getElementById('seriAdiDuzenleBtn').disabled = true;
+}
+
 // ---- "Getir" butonu: seçili serinin kitaplarını çek ve listele ----
 async function seriGetir() {
 	const select = document.getElementById('seriesSelect');
@@ -115,6 +129,7 @@ async function seriGetir() {
 
 		currentBooks = data.books || [];
 		document.getElementById('kitapListesiCard').style.display = 'block';
+		document.getElementById('seriAdiDuzenleBtn').disabled = false;
 		kitapListesiRenderEt();
 	} catch (err) {
 		showTopNotice('Kitaplar yüklenirken bağlantı hatası oluştu: ' + err.message, true);
@@ -249,6 +264,40 @@ async function yeniSeriKaydet() {
 
 		// Yeni seri henüz boş — kullanıcı "Getir"e basınca boş liste görecek, bu normal.
 		await seriGetir();
+	} catch (err) {
+		showTopNotice('Bağlantı hatası: ' + err.message, true);
+	}
+}
+
+// ---- "Adını Düzenle" popup'ı: mevcut serinin ismini /Admin/UpdateSeriesName ile günceller ----
+async function seriAdiKaydet() {
+	const yeniAd = document.getElementById('seriAdiDuzenleInput').value.trim();
+	if (!yeniAd) {
+		showTopNotice('Seri adı boş olamaz.', true);
+		return;
+	}
+
+	try {
+		const res = await fetch('/Admin/UpdateSeriesName', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ seriesId: parseInt(currentSeriesId, 10), name: yeniAd })
+		});
+		const data = await res.json();
+
+		if (data.error) {
+			showTopNotice('Hata: ' + data.error, true);
+			return;
+		}
+
+		// Yerel listeyi ve dropdown'ı güncel isimle tazele
+		const seri = dbSeriesList.find(s => String(s.id) === String(currentSeriesId));
+		if (seri) seri.name = data.name;
+		renderSeriesSelect();
+		document.getElementById('seriesSelect').value = currentSeriesId;
+
+		popupKapat('seriAdiDuzenle');
+		showTopNotice(`Seri adı "${toTitleCase(data.name)}" olarak güncellendi.`);
 	} catch (err) {
 		showTopNotice('Bağlantı hatası: ' + err.message, true);
 	}

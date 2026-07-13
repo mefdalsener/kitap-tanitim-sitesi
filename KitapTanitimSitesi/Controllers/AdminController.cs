@@ -652,6 +652,39 @@ namespace KitapTanitimSitesi.Controllers
             }
         }
 
+        // ---- YENİ: Var olan bir serinin adını günceller — "Adını Düzenle" butonu.
+        // AddSeries'teki aynı-isim kontrolüyle tutarlı: başka bir seri zaten bu
+        // isme sahipse engelliyoruz (kendi mevcut ismiyle çakışması hariç). ----
+        [HttpPost]
+        public async Task<IActionResult> UpdateSeriesName([FromBody] UpdateSeriesNameRequest req, [FromServices] AppDbContext db)
+        {
+            try
+            {
+                if (req == null || req.SeriesId <= 0 || string.IsNullOrWhiteSpace(req.Name))
+                    return Json(new { error = "Geçersiz istek." });
+
+                var name = req.Name.Trim();
+
+                var series = await db.Series.FirstOrDefaultAsync(s => s.SeriesID == req.SeriesId);
+                if (series == null)
+                    return Json(new { error = "Seri bulunamadı. Sayfayı yenileyip tekrar deneyin." });
+
+                var nameTaken = await db.Series.AnyAsync(s =>
+                    s.SeriesID != req.SeriesId && s.SeriesName.ToLower() == name.ToLower());
+                if (nameTaken)
+                    return Json(new { error = $"\"{name}\" adında başka bir seri zaten var." });
+
+                series.SeriesName = name;
+                await db.SaveChangesAsync();
+
+                return Json(new { success = true, id = series.SeriesID, name = series.SeriesName });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
         // ---- YENİ: Var olan (henüz hiçbir seride olmayan) bir kitabı bir seriye bağlar ----
         [HttpPost]
         public async Task<IActionResult> AddBookToSeries([FromBody] AddBookToSeriesRequest req, [FromServices] AppDbContext db)
@@ -757,6 +790,13 @@ namespace KitapTanitimSitesi.Controllers
     {
         public int BookId { get; set; }
         public int? SeriesOrder { get; set; }
+    }
+
+    // ---- YENİ EKLENEN: Seri adını güncelleme için request modeli ----
+    public class UpdateSeriesNameRequest
+    {
+        public int SeriesId { get; set; }
+        public string Name { get; set; }
     }
 
     public class AddBookToSeriesRequest
