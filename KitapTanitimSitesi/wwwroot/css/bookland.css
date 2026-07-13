@@ -805,15 +805,16 @@ body {
     }
 
 .yazar-kapak {
-    width: 220px;
+    width: auto;
     height: 220px;
-    max-width: 220px;
     max-height: 220px;
+    box-shadow: 8px 15px 24px rgba(38,49,61,0.16);
 }
 
     .yazar-kapak img {
-        width: 100%;
         height: 100%;
+        width: auto;
+        display: block;
         object-fit: contain;
     }
 
