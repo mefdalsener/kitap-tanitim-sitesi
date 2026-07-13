@@ -111,6 +111,11 @@
                 .isbn-uyari-close:hover {
                     color: #fff;
                 }
+
+            .scrape-links-toggle,
+            .scrape-links-panel {
+                background: linear-gradient(135deg, #0d2b21 0%, #1a5c3d 100%);
+            }
     </style>
 </head>
 <body>
@@ -121,7 +126,28 @@
             <a href="/Bookland" class="header-icon-link" title="Bookland'e Git"><i class="fa-solid fa-house"></i></a>
         </div>
     </div>
-
+    <!-- SOL KAYAN KAYNAK LİNK PANELİ (scrape edilen linkler) -->
+    <div class="scrape-links-widget" id="scrapeLinksWidget">
+        <div class="scrape-links-toggle" id="scrapeLinksToggle" onclick="scrapeLinksPaneliAcKapat(event)" title="Kaynak Linkleri">
+            <i class="fa-solid fa-list"></i>
+        </div>
+        <div class="scrape-links-panel" id="scrapeLinksPanel">
+            <div class="scrape-links-section" id="scrapeLinksBookSection" style="display:none;">
+                <h4>Kitap Bilgileri</h4>
+                <a id="scrapeLinkKitapyurdu" href="#" target="_blank" rel="noopener" style="display:none;">
+                    <i class="fa-solid fa-book"></i><span>Kitapyurdu Linki</span>
+                </a>
+                <a id="scrapeLinkGoodreadsBook" href="#" target="_blank" rel="noopener" style="display:none;">
+                    <i class="fa-brands fa-goodreads"></i><span>Goodreads Linki</span>
+                </a>
+            </div>
+            <div class="scrape-links-section" id="scrapeLinksAuthorSection" style="display:none;">
+                <h4>Yazar Bilgileri</h4>
+                <div id="scrapeLinksAuthorList"></div>
+            </div>
+            <div class="scrape-links-empty" id="scrapeLinksEmpty">Henüz link yok. Önce "Getir" ile veri çekin.</div>
+        </div>
+    </div>
     <div class="admin-body">
 
         <!-- OTOMATİK VERİ ÇEKME KARTI (BookSave'e özgü — partial'da DEĞİL) -->
@@ -152,9 +178,10 @@
             <div id="eslesmeSonuclari" style="margin-top:8px; font-size:13px; color:#81c784; line-height:1.6;"></div>
 
             <!-- ISBN artık elle girilip aranmıyor — sadece link ile "Getir" sonucunda otomatik dolar. -->
+            <!-- ISBN hem linkten (scrape) otomatik dolabilir hem de elle girilip düzenlenebilir. -->
             <div class="scrape-isbn-group" style="margin-top:14px;">
                 <label>ISBN</label>
-                <input type="text" id="isbnInput" placeholder="Linkten otomatik doldurulur..." readonly />
+                <input type="text" id="isbnInput" placeholder="Linkten otomatik dolar, ya da elle girin..." onchange="isbnKayitliKontrolEt()" />
             </div>
             <span id="isbnDurum" style="display:block; margin-top:8px; font-size:13px; color:rgba(255,255,255,0.75); min-height:18px;"></span>
         </div>

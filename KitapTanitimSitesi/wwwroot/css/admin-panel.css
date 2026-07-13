@@ -704,3 +704,101 @@ body {
     opacity: 0.4;
     cursor: not-allowed;
 }
+
+/* ================== SOL KAYAN KAYNAK LİNK PANELİ ================== */
+.scrape-links-widget {
+    position: fixed;
+    left: 18px;
+    top: 140px;
+    z-index: 500;
+}
+
+.scrape-links-toggle {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #2d2d5e 100%); /* sayfa/card rengiyle uyumlu */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+    .scrape-links-toggle i {
+        color: #fff;
+        font-size: 17px;
+    }
+
+    .scrape-links-toggle:hover {
+        box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+        transform: scale(1.05);
+    }
+
+.scrape-links-panel {
+    margin-top: 10px;
+    width: 0;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    background: linear-gradient(135deg, #1a1a2e 0%, #2d2d5e 100%);
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    padding: 0 14px;
+    transition: width 0.22s ease, max-height 0.22s ease, opacity 0.18s ease, padding 0.22s ease;
+}
+
+.scrape-links-widget.open .scrape-links-panel {
+    width: 260px;
+    max-height: 420px;
+    opacity: 1;
+    padding: 16px 14px;
+    overflow-y: auto;
+}
+
+.scrape-links-panel h4 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255,255,255,0.5);
+    margin: 12px 0 6px 0;
+}
+
+    .scrape-links-panel h4:first-child {
+        margin-top: 0;
+    }
+
+.scrape-links-section a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    font-size: 12.5px;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background 0.15s;
+}
+
+    .scrape-links-section a:hover {
+        background: rgba(255,255,255,0.18);
+    }
+
+    .scrape-links-section a i {
+        flex-shrink: 0;
+        color: #90caf9;
+        width: 14px;
+        text-align: center;
+    }
+
+.scrape-links-empty {
+    font-size: 12px;
+    color: rgba(255,255,255,0.5);
+    padding: 4px 0 2px 0;
+}

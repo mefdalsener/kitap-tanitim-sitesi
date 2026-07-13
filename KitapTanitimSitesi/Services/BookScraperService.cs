@@ -22,7 +22,11 @@ namespace KitapTanitimSitesi.Services
             var result = new SchemaResult();
 
             if (!string.IsNullOrWhiteSpace(kitapyurduUrl))
-                await ScrapeKitapyurduAsync(kitapyurduUrl, result);
+                if (!string.IsNullOrWhiteSpace(kitapyurduUrl))
+                {
+                    result.KitapyurduUrl = kitapyurduUrl;
+                    await ScrapeKitapyurduAsync(kitapyurduUrl, result);
+                }
 
             // Goodreads linki elle verilmediyse, ISBN üzerinden Selenium ile çözülür
             // (Goodreads search -> book/show yönlendirmesi JavaScript tabanlı olduğu için
@@ -147,9 +151,10 @@ namespace KitapTanitimSitesi.Services
                     int? authorBirthYear = null, authorDeathYear = null;
 
                     var authorUrl = node.GetAttributeValue("href", null);
+                    string fullAuthorUrl = null;
                     if (!string.IsNullOrEmpty(authorUrl))
                     {
-                        var fullAuthorUrl = authorUrl.StartsWith("http") ? authorUrl : "https://www.goodreads.com" + authorUrl;
+                        fullAuthorUrl = authorUrl.StartsWith("http") ? authorUrl : "https://www.goodreads.com" + authorUrl;
                         var authorDoc = await GetHtmlAsync(fullAuthorUrl);
 
                         var imgSrc = authorDoc.DocumentNode
@@ -181,6 +186,7 @@ namespace KitapTanitimSitesi.Services
                         existingAuthor.AuthorBiography ??= authorBiography;
                         existingAuthor.AuthorBirthYear ??= authorBirthYear;
                         existingAuthor.AuthorDeathYear ??= authorDeathYear;
+                        existingAuthor.AuthorUrl ??= fullAuthorUrl;
                     }
                     else
                     {
@@ -191,7 +197,8 @@ namespace KitapTanitimSitesi.Services
                             AuthorImage_URL = authorImageUrl,
                             AuthorBiography = authorBiography,
                             AuthorBirthYear = authorBirthYear,
-                            AuthorDeathYear = authorDeathYear
+                            AuthorDeathYear = authorDeathYear,
+                            AuthorUrl = fullAuthorUrl
                         });
                     }
                 }
@@ -317,6 +324,7 @@ namespace KitapTanitimSitesi.Services
         public List<string> Genres { get; set; } = new();
         public BookPublishersDto BookPublishers { get; set; } = new();
         public string GoodreadsUrl { get; set; }
+        public string KitapyurduUrl { get; set; }
     }
 
     public class BooksDto
@@ -335,6 +343,7 @@ namespace KitapTanitimSitesi.Services
         public string AuthorBiography { get; set; }
         public int? AuthorBirthYear { get; set; }
         public int? AuthorDeathYear { get; set; }
+        public string AuthorUrl { get; set; }
     }
 
     public class PublishersDto
