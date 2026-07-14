@@ -1,4 +1,5 @@
 ﻿@model KitapTanitimSitesi.Models.ViewModels.BooklandViewModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 
 @{
 	ViewData["Title"] = "Bookland";
@@ -30,7 +31,9 @@
 		cevirmenIds = kitap.BookTranslators.Select(bt => bt.TranslatorID).ToList(),
 		aciklama = kitap.BookDescription ?? "",
 		seriesId = kitap.SeriesID,
-		seriesOrder = kitap.SeriesOrder
+		seriesOrder = kitap.SeriesOrder,
+		puanOrtalama = kitap.AverageRating,
+		oySayisi = kitap.RatingCount ?? 0
 	}).ToList();
 
 	// Filtre panelinde SADECE gerçekten en az bir kitapta kullanılan
@@ -87,13 +90,15 @@
 <head>
 	<meta charset="utf-8" />
 	<title>@ViewData["Title"]</title>
+	<meta name="csrf-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
 	<link rel="stylesheet" href="~/css/site.css" />
 
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Rakkas&family=Sacramento&family=Special+Elite&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 	<link rel="stylesheet" href="~/css/bookland.css" />
-	
+
 </head>
 <body>
 
@@ -364,6 +369,17 @@
 						<div class="popup-yazar-yayinevi">
 							<p id="popup-yazar" class="popup-yazar-adi"></p>
 							<p id="popup-yayinevi" class="popup-yayinevi-adi"></p>
+							<div class="popup-puan" id="popup-puan" data-giris-yapildi="@(User.Identity != null && User.Identity.IsAuthenticated ? "true" : "false")">
+								<i class="fa-solid fa-star" data-yildiz="1"></i>
+								<i class="fa-solid fa-star" data-yildiz="2"></i>
+								<i class="fa-solid fa-star" data-yildiz="3"></i>
+								<i class="fa-solid fa-star" data-yildiz="4"></i>
+								<i class="fa-solid fa-star" data-yildiz="5"></i>
+								<span class="popup-puan-ozet">
+									<span id="popup-puan-ortalama">—</span>
+									<span id="popup-puan-oy-sayisi">(0 oy)</span>
+								</span>
+							</div>
 						</div>
 					</div>
 

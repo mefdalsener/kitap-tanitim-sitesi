@@ -67,6 +67,72 @@ function goruntuDegistir(hedef, push) {
 btnKitaplar.addEventListener("click", () => goruntuDegistir("kitaplar"));
 btnYazarlar.addEventListener("click", () => goruntuDegistir("yazarlar"));
 
+// --- Popup yıldız puanlama ---
+const popupPuanKapsayici = document.getElementById("popup-puan");
+let kullaniciPuani = null; // Kullanıcının bu kitaba tıklayarak verdiği puan (popup açılınca sıfırlanır)
+
+if (popupPuanKapsayici) {
+	const yildizlar = Array.from(popupPuanKapsayici.querySelectorAll("i"));
+
+	const yildizlariBoya = (kacTane) => {
+		yildizlar.forEach((yildiz) => {
+			const deger = Number(yildiz.dataset.yildiz);
+			yildiz.classList.toggle("dolu", deger <= kacTane);
+		});
+	};
+
+	yildizlar.forEach((yildiz) => {
+		yildiz.addEventListener("mouseenter", () => {
+			yildizlariBoya(Number(yildiz.dataset.yildiz));
+		});
+
+		yildiz.addEventListener("click", async () => {
+			if (popupPuanKapsayici.dataset.girisYapildi !== "true") {
+				alert("Puan verebilmek için giriş yapmalısınız.");
+				return;
+			}
+			if (!aktifKitapId) return;
+
+			const puan = Number(yildiz.dataset.yildiz);
+
+			try {
+				const csrfToken = document
+					.querySelector('meta[name="csrf-token"]')
+					?.getAttribute("content");
+
+				const yanit = await fetch("/Bookland/PuanVer", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						"X-CSRF-TOKEN": csrfToken || "",
+					},
+					body: JSON.stringify({ bookId: aktifKitapId, puan }),
+				});
+
+				if (!yanit.ok) {
+					alert("Puanınız kaydedilemedi, tekrar deneyin.");
+					return;
+				}
+
+				const sonuc = await yanit.json();
+				kullaniciPuani = sonuc.kullaniciPuani;
+				yildizlariBoya(kullaniciPuani);
+
+				document.getElementById("popup-puan-ortalama").textContent =
+					sonuc.ratingCount > 0 ? Number(sonuc.averageRating).toFixed(1) : "—";
+				document.getElementById("popup-puan-oy-sayisi").textContent =
+					`(${sonuc.ratingCount} oy)`;
+			} catch (hata) {
+				alert("Puanınız kaydedilemedi, tekrar deneyin.");
+			}
+		});
+	});
+
+	popupPuanKapsayici.addEventListener("mouseleave", () => {
+		yildizlariBoya(kullaniciPuani || 0);
+	});
+}
+
 // --- Kullanıcı adı dropdown'ı (Çıkış Yap) ---
 // Not: Bu sayfa _Layout.cshtml kullanmıyor ve Bootstrap JS dahil değil,
 // bu yüzden dropdown açma/kapama sitenin geri kalanıyla tutarlı şekilde
@@ -503,6 +569,19 @@ function popupAc(kitap, push) {
 		});
 	}
 	document.getElementById("popup-yayinevi").textContent = kitap.yayinevi;
+
+	// Puan ortalaması / oy sayısı artık backend'den gerçek verilerle geliyor.
+	kullaniciPuani = null;
+	const oySayisi = kitap.oySayisi || 0;
+	document.getElementById("popup-puan-ortalama").textContent =
+		oySayisi > 0 ? Number(kitap.puanOrtalama).toFixed(1) : "—";
+	document.getElementById("popup-puan-oy-sayisi").textContent = `(${oySayisi} oy)`;
+	if (popupPuanKapsayici) {
+		popupPuanKapsayici
+			.querySelectorAll("i")
+			.forEach((yildiz) => yildiz.classList.remove("dolu"));
+	}
+
 	document.getElementById("popup-ilk-yil").textContent = kitap.ilkYil || "—";
 	document.getElementById("popup-basim-yili").textContent =
 		kitap.basimYili || "—";

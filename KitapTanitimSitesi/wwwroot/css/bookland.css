@@ -867,6 +867,39 @@ body {
     margin: 0;
 }
 
+.popup-puan {
+    display: flex;
+    justify-content: flex-start;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+    .popup-puan i {
+        color: #26313D;
+        font-size: 15px;
+        cursor: pointer;
+        transition: color 0.15s ease;
+    }
+
+        .popup-puan i.dolu {
+            color: #F5C518;
+        }
+
+.popup-puan-ozet {
+    margin-left: 6px;
+    font-size: 13px;
+    color: #8CA3B8;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: default;
+}
+
+    .popup-puan-ozet #popup-puan-ortalama {
+        font-weight: bold;
+        color: #26313D;
+    }
+
 /* Kaydırılabilir alt kısım: bilgi tablosu + açıklama + seri bölümü */
 .popup-sag-kaydirilabilir {
     flex: 1;
