@@ -259,6 +259,23 @@
 						</div>
 					</div>
 
+					<!-- PUAN FİLTRESİ -->
+					<div class="filter-item" id="filter-puan">
+						<div class="filter-header" onclick="toggleFilter('puan')">
+							<span>Puan</span>
+							<span class="filter-arrow">▼</span>
+						</div>
+						<div class="filter-content" id="content-puan">
+							<div class="filter-puan-yildizlar" id="filter-puan-yildizlar">
+								<i class="fa-solid fa-star" data-yildiz="1" onclick="puanFiltresiSec(1)"></i>
+								<i class="fa-solid fa-star" data-yildiz="2" onclick="puanFiltresiSec(2)"></i>
+								<i class="fa-solid fa-star" data-yildiz="3" onclick="puanFiltresiSec(3)"></i>
+								<i class="fa-solid fa-star" data-yildiz="4" onclick="puanFiltresiSec(4)"></i>
+								<i class="fa-solid fa-star" data-yildiz="5" onclick="puanFiltresiSec(5)"></i>
+							</div>
+						</div>
+					</div>
+
 					<!-- SAYFA SAYISI FİLTRESİ -->
 					<div class="filter-item" id="filter-sayfa">
 						<div class="filter-header" onclick="toggleFilter('sayfa')">
@@ -470,6 +487,7 @@
 	<!-- Seri / ilgili kitap mantığı ve yazar->kitap ters ilişkisi için tüm kitapların özet verisi -->
 	<script id="tum-kitaplar-data" type="application/json">@Html.Raw(kitapVerileriJson)</script>
 	<script id="tum-yazarlar-data" type="application/json">@Html.Raw(yazarVerileriJson)</script>
+	<script id="kullanici-puanlari-data" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.KullaniciPuanlari))</script>
 
 	<script src="~/js/bookland/bookland.js"></script>
 </body>

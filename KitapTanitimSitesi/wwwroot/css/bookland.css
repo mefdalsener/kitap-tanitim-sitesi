@@ -514,12 +514,66 @@ body {
     }
 
 .book-cover {
+    position: relative;
     width: 100%;
     aspect-ratio: 2 / 3;
     overflow: hidden;
     border-radius: 10px;
     box-shadow: 4px 6px 14px rgba(38,49,61,0.12);
 }
+
+/* Kitap kapağının sağ üstünde sabit boyutlu puan rozeti (kurdele görünümü) */
+.kitap-puan-rozeti {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 34px;
+    height: 38px;
+    background-color: #FFFFFF;
+    border-top-right-radius: 10px; /* kapağın sağ üst köşesiyle aynı */
+    border-bottom-left-radius: 10px; /* tam çapraz karşı köşe */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    z-index: 2;
+}
+
+    .kitap-puan-rozeti i {
+        color: #F5C518;
+        font-size: 13px;
+        line-height: 1;
+    }
+
+    .kitap-puan-rozeti span {
+        font-size: 13px;
+        font-weight: 700;
+        color: #26313D;
+        line-height: 1;
+    }
+
+/* Sol menüdeki "Puan" filtresi: tek seçimli 5 yıldız */
+.filter-puan-yildizlar {
+    display: flex;
+    gap: 8px;
+    padding: 4px 2px;
+}
+
+    .filter-puan-yildizlar i {
+        font-size: 20px;
+        color: #C9D3DC;
+        cursor: pointer;
+        transition: color 0.15s ease, transform 0.1s ease;
+    }
+
+        .filter-puan-yildizlar i:hover {
+            transform: scale(1.1);
+        }
+
+        .filter-puan-yildizlar i.secili {
+            color: #F5C518;
+        }
 
 /* === ARAMA SONUCU BULUNAMADI (EJDERHA) DURUMU === */
 .arama-bos-durum {

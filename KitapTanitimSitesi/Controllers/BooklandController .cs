@@ -55,6 +55,19 @@ namespace KitapTanitimSitesi.Controllers
                     .ToListAsync()
             };
 
+            // Giriş yapmışsa, kullanıcının şu ana kadar verdiği tüm puanları
+            // tek sorguda çekip sözlüğe koyuyoruz (popup açılışında kullanılacak).
+            if (User.Identity != null && User.Identity.IsAuthenticated)
+            {
+                var userIdMetni = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (userIdMetni != null && int.TryParse(userIdMetni, out int userId))
+                {
+                    viewModel.KullaniciPuanlari = await _context.BookRatings
+                        .Where(br => br.UserID == userId)
+                        .ToDictionaryAsync(br => br.BookID, br => br.RatingValue);
+                }
+            }
+
             return View("BooklandIndex", viewModel);
         }
 
@@ -97,10 +110,22 @@ namespace KitapTanitimSitesi.Controllers
             var mevcutPuan = await _context.BookRatings
                 .FirstOrDefaultAsync(br => br.BookID == istek.BookId && br.UserID == userId);
 
+            bool puanSilindi = false;
+
             if (mevcutPuan != null)
             {
-                // Eşleşme var: eski puanın yerine yenisi yazılır.
-                mevcutPuan.RatingValue = (byte)istek.Puan;
+                if (mevcutPuan.RatingValue == istek.Puan)
+                {
+                    // Kullanıcı zaten verdiği puana tekrar bastı: puanı geri al.
+                    _context.BookRatings.Remove(mevcutPuan);
+                    kitap.RatingCount = Math.Max(0, (kitap.RatingCount ?? 0) - 1);
+                    puanSilindi = true;
+                }
+                else
+                {
+                    // Eşleşme var ama farklı bir yıldıza basıldı: eski puanın yerine yenisi yazılır.
+                    mevcutPuan.RatingValue = (byte)istek.Puan;
+                }
             }
             else
             {
@@ -133,7 +158,7 @@ namespace KitapTanitimSitesi.Controllers
                 success = true,
                 averageRating = kitap.AverageRating,
                 ratingCount = kitap.RatingCount ?? 0,
-                kullaniciPuani = istek.Puan
+                kullaniciPuani = puanSilindi ? (int?)null : istek.Puan
             });
         }
 

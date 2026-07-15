@@ -15,6 +15,13 @@ const tumYazarlar = JSON.parse(
 const yazarMap = {};
 tumYazarlar.forEach((y) => (yazarMap[y.id] = y));
 
+// Giriş yapmış kullanıcının önceden verdiği puanlar: { bookId: puan }.
+// Popup açıldığında yıldızları doğru boyamak, yeni puan verildiğinde de
+// burayı güncel tutmak için kullanılır (sayfa yenilenmeden).
+const kullaniciPuanlari = JSON.parse(
+	document.getElementById("kullanici-puanlari-data").textContent,
+);
+
 // --- URL / QUERY STRING DURUM YÖNETİMİ ---
 // Tüm filtreler, arama, aktif görünüm ve açık popup'lar URL'nin query
 // string'inde tutulur. Böylece adres çubuğundaki her durum paylaşılabilir
@@ -70,6 +77,44 @@ btnYazarlar.addEventListener("click", () => goruntuDegistir("yazarlar"));
 // --- Popup yıldız puanlama ---
 const popupPuanKapsayici = document.getElementById("popup-puan");
 let kullaniciPuani = null; // Kullanıcının bu kitaba tıklayarak verdiği puan (popup açılınca sıfırlanır)
+let secilenPuanFiltresi = null; // Sol menüdeki "Puan" filtresinde seçili yıldız (1-5) veya null
+
+// Sol menüdeki puan filtresi için: seçilen yıldıza göre ortalama puan aralığı.
+// 1: [1.0, 1.5] | 2: [1.5, 2.4] | 3: [2.5, 3.4] | 4: [3.5, 4.4] | 5: [4.5, 5.0]
+function puanAraligiHesapla(yildiz) {
+	switch (yildiz) {
+		case 1: return { min: 1.0, max: 1.4 };
+		case 2: return { min: 1.5, max: 2.4 };
+		case 3: return { min: 2.5, max: 3.4 };
+		case 4: return { min: 3.5, max: 4.4 };
+		case 5: return { min: 4.5, max: 5.0 };
+		default: return null;
+	}
+}
+
+function puanFiltresiYildizlariGuncelle() {
+	const kapsayici = document.getElementById("filter-puan-yildizlar");
+	if (!kapsayici) return;
+	kapsayici.querySelectorAll("i").forEach((yildiz) => {
+		const deger = Number(yildiz.dataset.yildiz);
+		yildiz.classList.toggle("secili", deger === secilenPuanFiltresi);
+	});
+}
+
+// Bir yıldıza tıklanınca: zaten seçiliyse kaldırılır (toggle), değilse seçilir.
+function puanFiltresiSec(deger) {
+	secilenPuanFiltresi = secilenPuanFiltresi === deger ? null : deger;
+	puanFiltresiYildizlariGuncelle();
+	filtreUygula();
+	urlGuncelle({ puan: secilenPuanFiltresi || null });
+}
+
+function kitapPuanFiltresineUyuyorMu(kitap) {
+	if (!secilenPuanFiltresi) return true;
+	if (kitap.puanOrtalama == null || !kitap.oySayisi) return false;
+	const araligi = puanAraligiHesapla(secilenPuanFiltresi);
+	return kitap.puanOrtalama >= araligi.min && kitap.puanOrtalama <= araligi.max;
+}
 
 if (popupPuanKapsayici) {
 	const yildizlar = Array.from(popupPuanKapsayici.querySelectorAll("i"));
@@ -115,13 +160,28 @@ if (popupPuanKapsayici) {
 				}
 
 				const sonuc = await yanit.json();
-				kullaniciPuani = sonuc.kullaniciPuani;
-				yildizlariBoya(kullaniciPuani);
+				kullaniciPuani = sonuc.kullaniciPuani; // null ise puan silinmiş demektir
+				yildizlariBoya(kullaniciPuani || 0);
 
 				document.getElementById("popup-puan-ortalama").textContent =
 					sonuc.ratingCount > 0 ? Number(sonuc.averageRating).toFixed(1) : "—";
 				document.getElementById("popup-puan-oy-sayisi").textContent =
 					`(${sonuc.ratingCount} oy)`;
+
+				// kitapMap ve kullaniciPuanlari'yı da güncel tut, böylece popup
+				// kapatılıp aynı kitap sayfa yenilenmeden tekrar açıldığında da
+				// (veya bu kitap başka bir listede/karta göründüğünde) güncel
+				// ortalama/oy sayısı ve kullanıcının kendi puanı görünsün.
+				const guncellenenKitap = kitapMap[aktifKitapId];
+				if (guncellenenKitap) {
+					guncellenenKitap.puanOrtalama = sonuc.averageRating;
+					guncellenenKitap.oySayisi = sonuc.ratingCount;
+				}
+				if (kullaniciPuani == null) {
+					delete kullaniciPuanlari[aktifKitapId];
+				} else {
+					kullaniciPuanlari[aktifKitapId] = kullaniciPuani;
+				}
 			} catch (hata) {
 				alert("Puanınız kaydedilemedi, tekrar deneyin.");
 			}
@@ -229,8 +289,17 @@ function kitapKartOlustur(kitap) {
 		? `<img src="${kitap.kapak}" alt="${kitap.ad}" />`
 		: "";
 
+	const oySayisi = kitap.oySayisi || 0;
+	const puanRozetiHtml =
+		oySayisi > 0
+			? `<div class="kitap-puan-rozeti">
+				<i class="fa-solid fa-star"></i>
+				<span>${Number(kitap.puanOrtalama).toFixed(1)}</span>
+			</div>`
+			: "";
+
 	kart.innerHTML = `
-		<div class="book-cover">${kapakHtml}</div>
+		<div class="book-cover">${kapakHtml}${puanRozetiHtml}</div>
 		<div class="book-information">
 		<p class="book-title">${kitap.ad}</p>
 		<p class="book-author">${kitap.yazar}</p>
@@ -296,6 +365,8 @@ function filtreUygula() {
 			);
 			if (!araligaGiren) return false;
 		}
+
+		if (!kitapPuanFiltresineUyuyorMu(kitap)) return false;
 
 		return true;
 	});
@@ -364,6 +435,10 @@ function kategoriHaricFiltrele(haricKategori) {
 			if (!araligaGiren) return false;
 		}
 
+		if (haricKategori !== "puan" && !kitapPuanFiltresineUyuyorMu(kitap)) {
+			return false;
+		}
+
 		return true;
 	});
 }
@@ -427,6 +502,10 @@ function filtreleriSifirla() {
 	document.getElementById("range-min-label").textContent = rangeMin.min;
 	document.getElementById("range-max-label").textContent = rangeMax.max;
 
+	// Puan filtresini de sıfırla
+	secilenPuanFiltresi = null;
+	puanFiltresiYildizlariGuncelle();
+
 	// Açık filtre panellerini kapat (isteğe bağlı, ister kaldır)
 	document.querySelectorAll(".filter-item.open").forEach((item) => {
 		item.classList.remove("open");
@@ -440,6 +519,7 @@ function filtreleriSifirla() {
 		seri: null,
 		sayfaMin: null,
 		sayfaMax: null,
+		puan: null,
 	});
 
 	filtreUygula();
@@ -570,8 +650,10 @@ function popupAc(kitap, push) {
 	}
 	document.getElementById("popup-yayinevi").textContent = kitap.yayinevi;
 
-	// Puan ortalaması / oy sayısı artık backend'den gerçek verilerle geliyor.
-	kullaniciPuani = null;
+	// Puan ortalaması / oy sayısı backend'den gerçek verilerle geliyor.
+	// Kullanıcı bu kitaba daha önce puan verdiyse (kullaniciPuanlari), o puan
+	// kadar yıldız baştan sarı gösterilir; vermediyse hepsi boş başlar.
+	kullaniciPuani = kullaniciPuanlari[kitap.id] ?? null;
 	const oySayisi = kitap.oySayisi || 0;
 	document.getElementById("popup-puan-ortalama").textContent =
 		oySayisi > 0 ? Number(kitap.puanOrtalama).toFixed(1) : "—";
@@ -579,7 +661,10 @@ function popupAc(kitap, push) {
 	if (popupPuanKapsayici) {
 		popupPuanKapsayici
 			.querySelectorAll("i")
-			.forEach((yildiz) => yildiz.classList.remove("dolu"));
+			.forEach((yildiz) => {
+				const deger = Number(yildiz.dataset.yildiz);
+				yildiz.classList.toggle("dolu", deger <= (kullaniciPuani || 0));
+			});
 	}
 
 	document.getElementById("popup-ilk-yil").textContent = kitap.ilkYil || "—";
@@ -843,6 +928,11 @@ function URLdenDurumUygula() {
 	rangeMax.value = params.get("sayfaMax") || rangeMax.max;
 	document.getElementById("range-min-label").textContent = rangeMin.value;
 	document.getElementById("range-max-label").textContent = rangeMax.value;
+
+	// Puan filtresi (tek seçimli yıldız)
+	const puanParam = params.get("puan");
+	secilenPuanFiltresi = puanParam ? Number(puanParam) : null;
+	puanFiltresiYildizlariGuncelle();
 
 	// Filtreleri ve aramayı uygula (bu, filtreSecenekleriniGuncelle'yi de tetikler)
 	filtreUygula();
