@@ -487,6 +487,71 @@ body {
 }
 
 /* === KİTAP ALANI === */
+.kitaplar-icerik {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* Uygulanan filtrelerin kitapların üstünde etiket olarak göründüğü çubuk.
+   Boşken (hiç filtre yokken) JS tarafından gizlenir. */
+.filtre-etiketleri {
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 12px 0;
+}
+
+    .filtre-etiketleri.gorunur {
+        display: flex;
+    }
+
+.filtre-etiketi {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 6px 6px 14px;
+    border-radius: 999px;
+    background-color: #FFFFFF;
+    border: 1px solid #DCE8F2;
+    color: #26313D;
+    font-size: 13px;
+    box-shadow: 0 4px 18px rgba(89,158,210,0.08);
+}
+
+.filtre-etiketi-yildizlar {
+    display: inline-flex;
+    gap: 2px;
+}
+
+    .filtre-etiketi-yildizlar i {
+        color: #F5C518;
+        font-size: 12px;
+    }
+
+.filtre-etiketi-kaldir {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 50%;
+    background-color: #EAF2F9;
+    color: #599ED2;
+    font-size: 10px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+    .filtre-etiketi-kaldir:hover {
+        background-color: #E4576B;
+        color: #FFFFFF;
+    }
+
 .book-grid {
     flex-grow: 1;
     display: grid;

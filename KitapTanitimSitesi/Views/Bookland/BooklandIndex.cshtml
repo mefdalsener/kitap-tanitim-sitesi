@@ -297,29 +297,35 @@
 				</div>
 			</aside>
 
-			<main class="book-grid" id="book-grid">
-				@foreach (var kitap in siraliKitaplar)
-				{
-					var veri = kitapVerileriMap[kitap.BookID];
-					<div class="book-card" onclick="popupAc(kitapMap[@kitap.BookID])" style="cursor:pointer;">
-						<div class="book-cover">
-							@if (!string.IsNullOrEmpty(kitap.BookCoverImage_URL))
-							{
-								<img src="@kitap.BookCoverImage_URL" alt="@kitap.BookName" />
-							}
-						</div>
-						<div class="book-information">
-							<p class="book-title">@kitap.BookName</p>
-							<p class="book-author">@veri.yazar</p>
-							<p class="book-publisher">@veri.yayinevi</p>
-						</div>
-					</div>
-				}
-			</main>
+			<div class="kitaplar-icerik">
 
-			<div class="arama-bos-durum" id="arama-bos-durum">
-				<img src="~/images/little-dragon-in-library.png" alt="Kitap bulunamadı" />
-				<p class="arama-bos-yazi" id="arama-bos-yazi"></p>
+				<div class="filtre-etiketleri" id="filtre-etiketleri"></div>
+
+				<main class="book-grid" id="book-grid">
+					@foreach (var kitap in siraliKitaplar)
+					{
+						var veri = kitapVerileriMap[kitap.BookID];
+						<div class="book-card" onclick="popupAc(kitapMap[@kitap.BookID])" style="cursor:pointer;">
+							<div class="book-cover">
+								@if (!string.IsNullOrEmpty(kitap.BookCoverImage_URL))
+								{
+									<img src="@kitap.BookCoverImage_URL" alt="@kitap.BookName" />
+								}
+							</div>
+							<div class="book-information">
+								<p class="book-title">@kitap.BookName</p>
+								<p class="book-author">@veri.yazar</p>
+								<p class="book-publisher">@veri.yayinevi</p>
+							</div>
+						</div>
+					}
+				</main>
+
+				<div class="arama-bos-durum" id="arama-bos-durum">
+					<img src="~/images/little-dragon-in-library.png" alt="Kitap bulunamadı" />
+					<p class="arama-bos-yazi" id="arama-bos-yazi"></p>
+				</div>
+
 			</div>
 
 		</div>
