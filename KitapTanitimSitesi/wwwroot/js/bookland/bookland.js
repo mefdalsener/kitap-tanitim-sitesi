@@ -656,8 +656,161 @@ function renderSeri(kitap) {
 		container.appendChild(liste);
 	}
 }
+// Kitap popup'ındaki "Hakkında" / "Yorumlar" sekmeleri arasında geçiş yapar.
+// İlgili buton "aktif" class'ını alır, ilgili içerik div'i gösterilir,
+// kaydırma konumu sekme değişince başa alınır (bir önceki sekmenin
+// kaydırma pozisyonu diğerine taşınmasın diye).
+function popupSekmeDegistir(sekme) {
+	document
+		.querySelectorAll("#popup-sekmeler .popup-sekme")
+		.forEach((buton) => {
+			buton.classList.toggle("aktif", buton.dataset.sekme === sekme);
+		});
+
+	document
+		.querySelectorAll("#popup-scroll-alani .popup-tab-icerik")
+		.forEach((icerik) => {
+			icerik.classList.toggle("aktif", icerik.id === `popup-tab-${sekme}`);
+		});
+
+	document.getElementById("popup-scroll-alani").scrollTop = 0;
+}
+
+// === YORUMLAR SEKMESİ: yorum yazma kutusu ===
+// Bu yıldız seçici, kitap popup'ının üstündeki salt-okunur ortalama
+// yıldızlarından (popup-puan) tamamen bağımsız çalışır; kullanıcının
+// vermek istediği puanı burada seçmesi için var.
+let yorumSeciliPuan = null;
+const yorumYildizSecici = document.getElementById("yorum-yildiz-secici");
+
+if (yorumYildizSecici) {
+	const yorumYildizlari = Array.from(yorumYildizSecici.querySelectorAll("i"));
+
+	yorumYildizlari.forEach((yildiz) => {
+		yildiz.addEventListener("mouseenter", () => {
+			const deger = Number(yildiz.dataset.yildiz);
+			yorumYildizlari.forEach((y) => {
+				y.classList.toggle("onizleme", Number(y.dataset.yildiz) <= deger);
+			});
+		});
+
+		yildiz.addEventListener("click", () => {
+			yorumSeciliPuan = Number(yildiz.dataset.yildiz);
+			yorumYildizlari.forEach((y) => {
+				y.classList.toggle("dolu", Number(y.dataset.yildiz) <= yorumSeciliPuan);
+			});
+			const uyari = document.getElementById("yorum-uyari");
+			if (uyari) uyari.textContent = "";
+		});
+	});
+
+	yorumYildizSecici.addEventListener("mouseleave", () => {
+		yorumYildizlari.forEach((y) => y.classList.remove("onizleme"));
+	});
+}
+
+// Popup her açıldığında (yeni kitap seçildiğinde) yorum formunu baştan
+// sıfırlar; önceki kitaba yazılmış taslak diğer kitapta görünmesin diye.
+function yorumFormunuSifirla() {
+	yorumSeciliPuan = null;
+
+	document
+		.querySelectorAll("#yorum-yildiz-secici i")
+		.forEach((y) => y.classList.remove("dolu", "onizleme"));
+
+	const metinAlani = document.getElementById("yorum-metin-alani");
+	if (metinAlani) metinAlani.value = "";
+
+	const uyari = document.getElementById("yorum-uyari");
+	if (uyari) uyari.textContent = "";
+}
+
+// "Yorum Yap" butonuna basılınca çalışır. Kural: yorum metni varsa (sadece
+// boşlukla/backspace ile boşaltılmış metin boş sayılır) yıldız da seçili
+// olmak zorunda; yıldız tek başına (yorumsuz) her zaman gönderilebilir.
+// NOT: backend'e gönderme kısmı henüz bağlanmadı, bir sonraki adımda
+// PuanVer endpoint'i genişleyince buraya fetch çağrısı eklenecek.
+function yorumGonder() {
+	const metinAlani = document.getElementById("yorum-metin-alani");
+	const uyari = document.getElementById("yorum-uyari");
+	const metin = metinAlani ? metinAlani.value.trim() : "";
+
+	if (!yorumSeciliPuan) {
+		uyari.textContent = metin.length > 0
+			? "Yorum yazabilmek için önce puan vermelisin."
+			: "Göndermeden önce en az bir yıldız seçmelisin.";
+		return;
+	}
+
+	uyari.textContent = "";
+	console.log("Gönderilecek:", { bookId: aktifKitapId, puan: yorumSeciliPuan, yorum: metin });
+}
+
+// Yorumlar sekmesindeki kart listesini doldurur. kitap.yorumlar backend'den
+// henüz gelmiyor, bu yüzden şimdilik boş durum gösteriliyor; backend adımında
+// kitap.yorumlar bir dizi olarak dolunca kartlar otomatik oluşacak.
+function renderYorumlar(kitap) {
+	const liste = document.getElementById("yorum-listesi");
+	const bosDurum = document.getElementById("yorum-bos-durum");
+	if (!liste || !bosDurum) return;
+
+	liste.innerHTML = "";
+	const yorumlar = Array.isArray(kitap.yorumlar) ? kitap.yorumlar : [];
+
+	if (yorumlar.length === 0) {
+		bosDurum.style.display = "block";
+		return;
+	}
+	bosDurum.style.display = "none";
+
+	yorumlar.forEach((yorum) => {
+		const kart = document.createElement("div");
+		kart.className = "yorum-karti";
+
+		const ustSatir = document.createElement("div");
+		ustSatir.className = "yorum-karti-ust";
+
+		const kullanici = document.createElement("span");
+		kullanici.className = "yorum-kullanici-adi";
+		kullanici.textContent = yorum.kullaniciAdi || "Kullanıcı";
+
+		const tarih = document.createElement("span");
+		tarih.className = "yorum-tarih";
+		tarih.textContent = yorum.tarih || "";
+
+		ustSatir.appendChild(kullanici);
+		ustSatir.appendChild(tarih);
+
+		const yildizSatiri = document.createElement("div");
+		yildizSatiri.className = "yorum-karti-yildizlar";
+		for (let i = 1; i <= 5; i++) {
+			const yildiz = document.createElement("i");
+			yildiz.className = "fa-solid fa-star" + (i <= (yorum.puan || 0) ? " dolu" : "");
+			yildizSatiri.appendChild(yildiz);
+		}
+
+		kart.appendChild(ustSatir);
+		kart.appendChild(yildizSatiri);
+
+		if (yorum.yorum) {
+			const metin = document.createElement("p");
+			metin.className = "yorum-karti-metin";
+			metin.textContent = yorum.yorum;
+			kart.appendChild(metin);
+		}
+
+		liste.appendChild(kart);
+	});
+}
+
 let aktifKitapId = null;
 function popupAc(kitap, push) {
+	// Popup her açıldığında "Hakkında" sekmesiyle başlar; önceki kitaptan
+	// kalan "Yorumlar" sekmesi açık kalmasın diye baştan sıfırlanır.
+	popupSekmeDegistir("hakkinda");
+	yorumFormunuSifirla();
+	renderYorumlar(kitap);
+
 	aktifKitapId = kitap.id;
 	document.getElementById("popup-kapak-img").src = kitap.kapak || "";
 	document.getElementById("popup-kitap-adi").textContent = kitap.ad;
@@ -721,11 +874,9 @@ function popupAc(kitap, push) {
 
 	renderSeri(kitap);
 
-	const kaydirmaAlani = document.getElementById("popup-scroll-alani");
-	kaydirmaAlani.scrollTop = 0;
-
 	document.getElementById("kitap-popup-overlay").classList.add("aktif");
 	document.body.style.overflow = "hidden";
+	document.getElementById("popup-scroll-alani").scrollTop = 0;
 
 	if (push !== false) {
 		urlGuncelle({ view: null, bookId: kitap.id, authorId: null });
@@ -807,11 +958,9 @@ function yazarPopupAc(yazar, push) {
 
 	renderYazarKitaplari(yazar.id);
 
-	const kaydirmaAlani = document.getElementById("yazar-popup-scroll-alani");
-	kaydirmaAlani.scrollTop = 0;
-
 	document.getElementById("yazar-popup-overlay").classList.add("aktif");
 	document.body.style.overflow = "hidden";
+	document.getElementById("yazar-popup-scroll-alani").scrollTop = 0;
 
 	if (push !== false) {
 		urlGuncelle({ view: "yazarlar", authorId: yazar.id, bookId: null });

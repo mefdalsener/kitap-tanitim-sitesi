@@ -67,6 +67,19 @@ function popupAc(tip) {
 		const seri = dbSeriesList.find(s => String(s.id) === String(currentSeriesId));
 		document.getElementById('seriAdiDuzenleInput').value = seri ? seri.name : '';
 	}
+	if (tip === 'seriSil') {
+		if (!currentSeriesId) {
+			showTopNotice('Önce yukarıdan bir seri seçip "Getir" ile açmalısınız.', true);
+			return;
+		}
+		const seri = dbSeriesList.find(s => String(s.id) === String(currentSeriesId));
+		const adet = currentBooks.length;
+		const kitapUyarisi = adet > 0
+			? ` Bu seriye bağlı ${adet} kitap var, silindiğinde bu kitaplar seriden otomatik çıkarılır (kitapların kendisi silinmez).`
+			: '';
+		document.getElementById('seriSilMesaji').textContent =
+			`"${seri ? toTitleCase(seri.name) : ''}" serisini silmek istediğinize emin misiniz?${kitapUyarisi}`;
+	}
 	document.getElementById('popup' + tip.charAt(0).toUpperCase() + tip.slice(1)).classList.add('active');
 }
 
@@ -104,6 +117,7 @@ function renderSeriesSelect() {
 //      kullanıcı "Getir"e basıp seçimi teyit etmeden yanlış seriyi düzenlemesin ----
 function seriSecimDegisti() {
 	document.getElementById('seriAdiDuzenleBtn').disabled = true;
+	document.getElementById('seriSilBtn').disabled = true;
 }
 
 // ---- "Getir" butonu: seçili serinin kitaplarını çek ve listele ----
@@ -130,6 +144,7 @@ async function seriGetir() {
 		currentBooks = data.books || [];
 		document.getElementById('kitapListesiCard').style.display = 'block';
 		document.getElementById('seriAdiDuzenleBtn').disabled = false;
+		document.getElementById('seriSilBtn').disabled = false;
 		kitapListesiRenderEt();
 	} catch (err) {
 		showTopNotice('Kitaplar yüklenirken bağlantı hatası oluştu: ' + err.message, true);
@@ -405,6 +420,48 @@ async function kitapSilOnayla() {
 		showTopNotice('Bağlantı hatası: ' + err.message, true);
 	} finally {
 		pendingRemoveBookId = null;
+	}
+}
+
+// ---- Onay popup'ındaki "Seriyi Sil" butonu: /Admin/DeleteSeries'i çağırır ----
+async function seriSilOnayla() {
+	if (!currentSeriesId) {
+		popupKapat('seriSil');
+		return;
+	}
+
+	const seri = dbSeriesList.find(s => String(s.id) === String(currentSeriesId));
+	const isim = seri ? toTitleCase(seri.name) : 'Seri';
+	const silinenId = currentSeriesId;
+
+	try {
+		const res = await fetch('/Admin/DeleteSeries', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ seriesId: parseInt(silinenId, 10) })
+		});
+
+		const result = await res.json();
+
+		if (!res.ok || result.error) {
+			showTopNotice('Hata: ' + (result.error || 'Bilinmeyen hata'), true);
+			return;
+		}
+
+		popupKapat('seriSil');
+		showTopNotice(`"${isim}" serisi silindi.`);
+
+		// Yerel listeden çıkar, seçimi ve ekranı sıfırla
+		dbSeriesList = dbSeriesList.filter(s => String(s.id) !== String(silinenId));
+		currentSeriesId = null;
+		currentBooks = [];
+		renderSeriesSelect();
+		document.getElementById('seriesSelect').value = '';
+		document.getElementById('kitapListesiCard').style.display = 'none';
+		document.getElementById('seriAdiDuzenleBtn').disabled = true;
+		document.getElementById('seriSilBtn').disabled = true;
+	} catch (err) {
+		showTopNotice('Bağlantı hatası: ' + err.message, true);
 	}
 }
 

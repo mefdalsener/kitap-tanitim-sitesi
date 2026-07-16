@@ -754,6 +754,38 @@ namespace KitapTanitimSitesi.Controllers
                 return Json(new { error = ex.Message });
             }
         }
+
+        // ---- YENİ: Bir seriyi tamamen siler. Seriye bağlı kitaplar silinmez —
+        // SeriesID/SeriesOrder alanları null'a çekilerek sadece seriden çıkarılır. ----
+        [HttpPost]
+        public async Task<IActionResult> DeleteSeries([FromBody] DeleteSeriesRequest req, [FromServices] AppDbContext db)
+        {
+            try
+            {
+                if (req == null || req.SeriesId <= 0)
+                    return Json(new { error = "Geçersiz istek." });
+
+                var series = await db.Series.FirstOrDefaultAsync(s => s.SeriesID == req.SeriesId);
+                if (series == null)
+                    return Json(new { error = "Seri bulunamadı. Sayfayı yenileyip tekrar deneyin." });
+
+                var bagliKitaplar = await db.Books.Where(b => b.SeriesID == req.SeriesId).ToListAsync();
+                foreach (var kitap in bagliKitaplar)
+                {
+                    kitap.SeriesID = null;
+                    kitap.SeriesOrder = null;
+                }
+
+                db.Series.Remove(series);
+                await db.SaveChangesAsync();
+
+                return Json(new { success = true, id = req.SeriesId });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
     }
 
     // ---- YENİ EKLENEN REQUEST MODELİ ----
@@ -810,6 +842,12 @@ namespace KitapTanitimSitesi.Controllers
     public class RemoveBookFromSeriesRequest
     {
         public int BookId { get; set; }
+        public int SeriesId { get; set; }
+    }
+
+    // ---- YENİ EKLENEN: Seri silme request modeli ----
+    public class DeleteSeriesRequest
+    {
         public int SeriesId { get; set; }
     }
 }

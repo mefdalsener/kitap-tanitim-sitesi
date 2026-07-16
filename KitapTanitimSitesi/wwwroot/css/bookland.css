@@ -1019,16 +1019,231 @@ body {
         color: #26313D;
     }
 
-/* Kaydırılabilir alt kısım: bilgi tablosu + açıklama + seri bölümü */
+/* === POPUP SEKMELERİ (Hakkında / Yorumlar) === */
+.popup-sekmeler {
+    display: flex;
+    gap: 4px;
+    margin-top: 14px;
+    background: #F4F8FB;
+    border: 1px solid #DCE8F2;
+    border-radius: 999px;
+    padding: 4px;
+    width: fit-content;
+}
+
+.popup-sekme {
+    border: none;
+    background: transparent;
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    color: #8CA3B8;
+    padding: 7px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.2s ease, background 0.2s ease;
+}
+
+    .popup-sekme:hover {
+        color: #599ED2;
+    }
+
+    .popup-sekme.aktif {
+        color: #FFFFFF;
+        background: #599ED2;
+        box-shadow: 0 2px 8px rgba(89,158,210,0.35);
+    }
+
+/* Kaydırılabilir alt kısım: aktif sekmenin içeriği burada kayar */
 .popup-sag-kaydirilabilir {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
     padding-right: 20px;
     padding-top: 18px;
-    display: flex;
+}
+
+.popup-tab-icerik {
+    display: none;
     flex-direction: column;
     gap: 18px;
+}
+
+    .popup-tab-icerik.aktif {
+        display: flex;
+    }
+
+/* === YORUM YAZMA KUTUSU === */
+.yorum-yaz-kutusu {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #F4F8FB;
+    border: 1px solid #DCE8F2;
+    border-radius: 14px;
+    padding: 16px;
+}
+
+.yorum-yaz-baslik {
+    font-size: 14px;
+    font-weight: bold;
+    color: #26313D;
+}
+
+.yorum-yildiz-secici {
+    display: flex;
+    gap: 6px;
+}
+
+    .yorum-yildiz-secici i {
+        color: #C7D6E2;
+        font-size: 22px;
+        cursor: pointer;
+        transition: color 0.15s ease;
+    }
+
+        .yorum-yildiz-secici i.onizleme,
+        .yorum-yildiz-secici i.dolu {
+            color: #F5C518;
+        }
+
+.yorum-metin-alani {
+    width: 100%;
+    min-height: 70px;
+    max-height: 160px;
+    resize: vertical;
+    border: 1px solid #DCE8F2;
+    border-radius: 10px;
+    background: #FFFFFF;
+    color: #26313D;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 10px 12px;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+}
+
+    .yorum-metin-alani::placeholder {
+        color: #8CA3B8;
+    }
+
+    .yorum-metin-alani:focus {
+        border-color: #599ED2;
+    }
+
+.yorum-yaz-alt {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.yorum-uyari {
+    font-size: 12px;
+    color: #E0664B;
+    flex: 1;
+}
+
+.yorum-gonder-btn {
+    border: none;
+    background: #599ED2;
+    color: #FFFFFF;
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    padding: 9px 20px;
+    border-radius: 999px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+}
+
+    .yorum-gonder-btn:hover {
+        background: #4685B8;
+    }
+
+.yorum-giris-uyari {
+    background: #F4F8FB;
+    border: 1px solid #DCE8F2;
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 14px;
+    color: #8CA3B8;
+    text-align: center;
+}
+
+    .yorum-giris-uyari a {
+        color: #599ED2;
+        font-weight: bold;
+        text-decoration: none;
+    }
+
+        .yorum-giris-uyari a:hover {
+            text-decoration: underline;
+        }
+
+/* === YORUM LİSTESİ === */
+.yorum-listesi {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.yorum-karti {
+    border: 1px solid #DCE8F2;
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: #FBFDFE;
+}
+
+.yorum-karti-ust {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.yorum-kullanici-adi {
+    font-size: 14px;
+    font-weight: bold;
+    color: #26313D;
+}
+
+.yorum-tarih {
+    font-size: 12px;
+    color: #8CA3B8;
+    flex-shrink: 0;
+}
+
+.yorum-karti-yildizlar {
+    display: flex;
+    gap: 3px;
+    margin-top: 4px;
+}
+
+    .yorum-karti-yildizlar i {
+        color: #C7D6E2;
+        font-size: 12px;
+    }
+
+        .yorum-karti-yildizlar i.dolu {
+            color: #F5C518;
+        }
+
+.yorum-karti-metin {
+    margin: 8px 0 0 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #26313D;
+    white-space: pre-wrap;
+}
+
+.yorum-bos-durum {
+    text-align: center;
+    font-size: 14px;
+    color: #8CA3B8;
+    padding: 24px 0;
 }
 
 .popup-bilgiler {

@@ -213,6 +213,7 @@
                         <option value="">— Seri seçin —</option>
                     </select>
                     <button type="button" class="secondary-btn" onclick="popupAc('yeniSeri')">➕ Yeni Seri Ekle</button>
+                    <button type="button" class="secondary-btn" id="seriSilBtn" onclick="popupAc('seriSil')" disabled>🗑 Seriyi Sil</button>
                     <button type="button" class="secondary-btn" id="seriAdiDuzenleBtn" onclick="popupAc('seriAdiDuzenle')" disabled>✎ Adını Düzenle</button>
                     <button type="button" class="getir-btn" id="getirBtn" onclick="seriGetir()">
                         <span class="btn-label">⬇ Getir</span>
@@ -253,6 +254,18 @@
             <div class="popup-buttons">
                 <button class="btn-cancel" onclick="popupKapat('seriAdiDuzenle')">İptal</button>
                 <button class="btn-confirm" onclick="seriAdiKaydet()">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP: Seriyi Sil (onay) -->
+    <div class="popup-overlay" id="popupSeriSil">
+        <div class="popup-box">
+            <h3>Seriyi Sil</h3>
+            <p id="seriSilMesaji" class="popup-message"></p>
+            <div class="popup-buttons">
+                <button class="btn-cancel" onclick="popupKapat('seriSil')">İptal</button>
+                <button class="btn-confirm btn-danger" onclick="seriSilOnayla()">Seriyi Sil</button>
             </div>
         </div>
     </div>

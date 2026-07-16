@@ -403,40 +403,84 @@
 									<span id="popup-puan-oy-sayisi">(0 oy)</span>
 								</span>
 							</div>
+
+							<div class="popup-sekmeler" id="popup-sekmeler">
+								<button type="button" class="popup-sekme aktif" data-sekme="hakkinda" onclick="popupSekmeDegistir('hakkinda')">Hakkında</button>
+								<button type="button" class="popup-sekme" data-sekme="yorumlar" onclick="popupSekmeDegistir('yorumlar')">Yorumlar</button>
+							</div>
 						</div>
 					</div>
 
 					<div class="popup-sag-kaydirilabilir" id="popup-scroll-alani">
 
-						<div class="popup-bilgiler">
-							<div class="popup-bilgi-satir">
-								<span class="popup-etiket">İlk Yayın Yılı</span>
-								<span id="popup-ilk-yil"></span>
+						<div class="popup-tab-icerik aktif" id="popup-tab-hakkinda">
+
+							<div class="popup-bilgiler">
+								<div class="popup-bilgi-satir">
+									<span class="popup-etiket">İlk Yayın Yılı</span>
+									<span id="popup-ilk-yil"></span>
+								</div>
+								<div class="popup-bilgi-satir">
+									<span class="popup-etiket">Basım Yılı</span>
+									<span id="popup-basim-yili"></span>
+								</div>
+								<div class="popup-bilgi-satir">
+									<span class="popup-etiket">Sayfa Sayısı</span>
+									<span id="popup-sayfa"></span>
+								</div>
+								<div class="popup-bilgi-satir">
+									<span class="popup-etiket">Tür</span>
+									<span id="popup-tur"></span>
+								</div>
+								<div class="popup-bilgi-satir">
+									<span class="popup-etiket">Çevirmen</span>
+									<span id="popup-cevirmen"></span>
+								</div>
 							</div>
-							<div class="popup-bilgi-satir">
-								<span class="popup-etiket">Basım Yılı</span>
-								<span id="popup-basim-yili"></span>
+
+							<div class="popup-aciklama">
+								<p id="popup-aciklama-metin"></p>
 							</div>
-							<div class="popup-bilgi-satir">
-								<span class="popup-etiket">Sayfa Sayısı</span>
-								<span id="popup-sayfa"></span>
-							</div>
-							<div class="popup-bilgi-satir">
-								<span class="popup-etiket">Tür</span>
-								<span id="popup-tur"></span>
-							</div>
-							<div class="popup-bilgi-satir">
-								<span class="popup-etiket">Çevirmen</span>
-								<span id="popup-cevirmen"></span>
-							</div>
+
+							<!-- Seri / ilgili kitaplar bölümü: sadece kitap bir seriye bağlıysa görünür -->
+							<div class="popup-seri" id="popup-seri"></div>
+
 						</div>
 
-						<div class="popup-aciklama">
-							<p id="popup-aciklama-metin"></p>
-						</div>
+						<div class="popup-tab-icerik" id="popup-tab-yorumlar">
 
-						<!-- Seri / ilgili kitaplar bölümü: sadece kitap bir seriye bağlıysa görünür -->
-						<div class="popup-seri" id="popup-seri"></div>
+							@if (User.Identity != null && User.Identity.IsAuthenticated)
+							{
+								<div class="yorum-yaz-kutusu" id="yorum-yaz-kutusu">
+									<div class="yorum-yaz-baslik">Puanını ver, istersen yorumunu da yaz</div>
+									<div class="yorum-yildiz-secici" id="yorum-yildiz-secici">
+										<i class="fa-solid fa-star" data-yildiz="1"></i>
+										<i class="fa-solid fa-star" data-yildiz="2"></i>
+										<i class="fa-solid fa-star" data-yildiz="3"></i>
+										<i class="fa-solid fa-star" data-yildiz="4"></i>
+										<i class="fa-solid fa-star" data-yildiz="5"></i>
+									</div>
+									<textarea id="yorum-metin-alani" class="yorum-metin-alani" placeholder="Bu kitap hakkında ne düşünüyorsun? (opsiyonel)" maxlength="2000"></textarea>
+									<div class="yorum-yaz-alt">
+										<span class="yorum-uyari" id="yorum-uyari"></span>
+										<button type="button" class="yorum-gonder-btn" id="yorum-gonder-btn" onclick="yorumGonder()">Yorum Yap</button>
+									</div>
+								</div>
+							}
+							else
+							{
+								<div class="yorum-giris-uyari">
+									Yorum yazmak ve puan vermek için <a asp-controller="Account" asp-action="Login">giriş yapmalısın</a>.
+								</div>
+							}
+
+							<div class="yorum-listesi" id="yorum-listesi"></div>
+
+							<div class="yorum-bos-durum" id="yorum-bos-durum" style="display:none;">
+								Henüz yorum yapılmamış. İlk yorumu sen yazabilirsin!
+							</div>
+
+						</div>
 
 					</div>
 
