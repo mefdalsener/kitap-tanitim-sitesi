@@ -71,11 +71,16 @@ namespace KitapTanitimSitesi.Controllers
             return View("BooklandIndex", viewModel);
         }
 
-        // Kullanıcı popup'ta bir yıldıza tıkladığında çağrılır.
+        // Kullanıcı popup'ta Yorumlar sekmesindeki yıldız seçiciyi kullanıp
+        // "Yorum Yap" butonuna bastığında çağrılır.
         // - Aynı kullanıcı aynı kitaba daha önce puan verdiyse: puan güncellenir.
+        //   Yorum metni SADECE gönderilen metin boş değilse güncellenir; kullanıcı
+        //   sadece puanını değiştirip yorum kutusunu boş bırakırsa eski yorumu
+        //   korunur (üzerine yazılıp silinmez).
         // - Daha önce puan vermediyse: yeni kayıt eklenir ve Book.RatingCount +1 artırılır.
         // - Her iki durumda da Book.AverageRating, o kitaba ait tüm puanların
         //   ortalaması alınıp tek ondalık basamağa yuvarlanarak yeniden hesaplanır.
+        // - Puanı/yorumu tamamen kaldırmak için ayrı bir uç nokta var: PuanKaldir.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> PuanVer([FromBody] PuanVerRequest istek)
@@ -85,11 +90,6 @@ namespace KitapTanitimSitesi.Controllers
                 return Unauthorized();
             }
 
-            // NOT: Giriş yapan kullanıcının Id'sinin ClaimTypes.NameIdentifier
-            // claim'i içinde taşındığı varsayılıyor (yani login sırasında
-            // SignInAsync'e eklenen claim listesinde bu claim User.Id'yi
-            // taşıyor olmalı). Projedeki giriş mekanizması farklıysa
-            // burası ona göre güncellenmeli.
             var userIdMetni = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userIdMetni == null || !int.TryParse(userIdMetni, out int userId))
             {
@@ -110,33 +110,30 @@ namespace KitapTanitimSitesi.Controllers
             var mevcutPuan = await _context.BookRatings
                 .FirstOrDefaultAsync(br => br.BookID == istek.BookId && br.UserID == userId);
 
-            bool puanSilindi = false;
+            string? yorumMetni;
 
             if (mevcutPuan != null)
             {
-                if (mevcutPuan.RatingValue == istek.Puan)
+                mevcutPuan.RatingValue = (byte)istek.Puan;
+                if (!string.IsNullOrWhiteSpace(istek.Yorum))
                 {
-                    // Kullanıcı zaten verdiği puana tekrar bastı: puanı geri al.
-                    _context.BookRatings.Remove(mevcutPuan);
-                    kitap.RatingCount = Math.Max(0, (kitap.RatingCount ?? 0) - 1);
-                    puanSilindi = true;
+                    mevcutPuan.Comment = istek.Yorum.Trim();
                 }
-                else
-                {
-                    // Eşleşme var ama farklı bir yıldıza basıldı: eski puanın yerine yenisi yazılır.
-                    mevcutPuan.RatingValue = (byte)istek.Puan;
-                }
+                yorumMetni = mevcutPuan.Comment;
             }
             else
             {
-                // Eşleşme yok: yeni kayıt eklenir ve oy sayısı 1 artırılır.
+                var yeniYorum = string.IsNullOrWhiteSpace(istek.Yorum) ? null : istek.Yorum.Trim();
+
                 _context.BookRatings.Add(new BookRating
                 {
                     BookID = istek.BookId,
                     UserID = userId,
-                    RatingValue = (byte)istek.Puan
+                    RatingValue = (byte)istek.Puan,
+                    Comment = yeniYorum
                 });
                 kitap.RatingCount = (kitap.RatingCount ?? 0) + 1;
+                yorumMetni = yeniYorum;
             }
 
             await _context.SaveChangesAsync();
@@ -158,14 +155,109 @@ namespace KitapTanitimSitesi.Controllers
                 success = true,
                 averageRating = kitap.AverageRating,
                 ratingCount = kitap.RatingCount ?? 0,
-                kullaniciPuani = puanSilindi ? (int?)null : istek.Puan
+                kullaniciPuani = istek.Puan,
+                yorumMetni,
+                yorumTarihi = DateTime.Now.ToString("dd.MM.yyyy")
             });
+        }
+
+        // Yorumlar sekmesi açıldığında (ya da yeni bir yorum gönderildikten sonra
+        // liste tazelenirken) çağrılır. Sadece gerçek yorum metni olan puanları
+        // döndürür (yorumsuz salt puanlar burada listelenmez, onlar sadece
+        // ortalamaya katkı sağlar), en yeni yorum en üstte.
+        [HttpGet]
+        public async Task<IActionResult> GetYorumlar(int bookId)
+        {
+            var yorumlar = await _context.BookRatings
+                .Where(br => br.BookID == bookId && br.Comment != null && br.Comment != "")
+                .Include(br => br.User)
+                .OrderByDescending(br => br.CreatedAt)
+                .Select(br => new
+                {
+                    kullaniciAdi = br.User != null ? br.User.Username : "Kullanıcı",
+                    tarih = br.CreatedAt.ToString("dd.MM.yyyy"),
+                    puan = br.RatingValue,
+                    yorum = br.Comment
+                })
+                .ToListAsync();
+
+            return Json(yorumlar);
+        }
+
+        // Yorumlar sekmesindeki "Yorumu Kaldır" butonuna basılınca çağrılır.
+        // Kullanıcının bu kitaba ait puan+yorum satırını tamamen siler,
+        // oy sayısını ve ortalamayı buna göre yeniden hesaplar.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> PuanKaldir([FromBody] PuanKaldirRequest istek)
+        {
+            if (User.Identity == null || !User.Identity.IsAuthenticated)
+            {
+                return Unauthorized();
+            }
+
+            var userIdMetni = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userIdMetni == null || !int.TryParse(userIdMetni, out int userId))
+            {
+                return Unauthorized();
+            }
+
+            if (istek == null)
+            {
+                return BadRequest();
+            }
+
+            var kitap = await _context.Books.FirstOrDefaultAsync(b => b.BookID == istek.BookId);
+            if (kitap == null)
+            {
+                return NotFound();
+            }
+
+            var mevcutPuan = await _context.BookRatings
+                .FirstOrDefaultAsync(br => br.BookID == istek.BookId && br.UserID == userId);
+
+            if (mevcutPuan == null)
+            {
+                return NotFound();
+            }
+
+            _context.BookRatings.Remove(mevcutPuan);
+            kitap.RatingCount = Math.Max(0, (kitap.RatingCount ?? 0) - 1);
+            await _context.SaveChangesAsync();
+
+            var tumPuanlar = await _context.BookRatings
+                .Where(br => br.BookID == istek.BookId)
+                .Select(br => (int)br.RatingValue)
+                .ToListAsync();
+
+            kitap.AverageRating = tumPuanlar.Count > 0
+                ? Math.Round((decimal)tumPuanlar.Average(), 1)
+                : 0;
+
+            await _context.SaveChangesAsync();
+
+            return Json(new
+            {
+                success = true,
+                averageRating = kitap.AverageRating,
+                ratingCount = kitap.RatingCount ?? 0
+            });
+        }
+
+        public class PuanKaldirRequest
+        {
+            public int BookId { get; set; }
         }
 
         public class PuanVerRequest
         {
             public int BookId { get; set; }
             public int Puan { get; set; }
+
+            // Yorumlar sekmesindeki metin kutusundan gelen (opsiyonel) yorum.
+            // Boş gönderilirse (kullanıcı sadece puanını değiştiriyorsa) eski
+            // yorum korunur, üzerine yazılmaz.
+            public string? Yorum { get; set; }
         }
     }
 }

@@ -392,12 +392,12 @@
 						<div class="popup-yazar-yayinevi">
 							<p id="popup-yazar" class="popup-yazar-adi"></p>
 							<p id="popup-yayinevi" class="popup-yayinevi-adi"></p>
-							<div class="popup-puan" id="popup-puan" data-giris-yapildi="@(User.Identity != null && User.Identity.IsAuthenticated ? "true" : "false")">
-								<i class="fa-solid fa-star" data-yildiz="1"></i>
-								<i class="fa-solid fa-star" data-yildiz="2"></i>
-								<i class="fa-solid fa-star" data-yildiz="3"></i>
-								<i class="fa-solid fa-star" data-yildiz="4"></i>
-								<i class="fa-solid fa-star" data-yildiz="5"></i>
+							<div class="popup-puan" id="popup-puan">
+								<span class="popup-yildiz" data-yildiz="1"><i class="fa-solid fa-star popup-yildiz-arka"></i><span class="popup-yildiz-dolum"><i class="fa-solid fa-star"></i></span></span>
+								<span class="popup-yildiz" data-yildiz="2"><i class="fa-solid fa-star popup-yildiz-arka"></i><span class="popup-yildiz-dolum"><i class="fa-solid fa-star"></i></span></span>
+								<span class="popup-yildiz" data-yildiz="3"><i class="fa-solid fa-star popup-yildiz-arka"></i><span class="popup-yildiz-dolum"><i class="fa-solid fa-star"></i></span></span>
+								<span class="popup-yildiz" data-yildiz="4"><i class="fa-solid fa-star popup-yildiz-arka"></i><span class="popup-yildiz-dolum"><i class="fa-solid fa-star"></i></span></span>
+								<span class="popup-yildiz" data-yildiz="5"><i class="fa-solid fa-star popup-yildiz-arka"></i><span class="popup-yildiz-dolum"><i class="fa-solid fa-star"></i></span></span>
 								<span class="popup-puan-ozet">
 									<span id="popup-puan-ortalama">—</span>
 									<span id="popup-puan-oy-sayisi">(0 oy)</span>
@@ -463,7 +463,10 @@
 									<textarea id="yorum-metin-alani" class="yorum-metin-alani" placeholder="Bu kitap hakkında ne düşünüyorsun? (opsiyonel)" maxlength="2000"></textarea>
 									<div class="yorum-yaz-alt">
 										<span class="yorum-uyari" id="yorum-uyari"></span>
-										<button type="button" class="yorum-gonder-btn" id="yorum-gonder-btn" onclick="yorumGonder()">Yorum Yap</button>
+										<div class="yorum-yaz-butonlar">
+											<button type="button" class="yorum-kaldir-btn" id="yorum-kaldir-btn" onclick="yorumKaldir()" style="display:none;">Yorumu Kaldır ✕</button>
+											<button type="button" class="yorum-gonder-btn" id="yorum-gonder-btn" onclick="yorumGonder()">Yorum Yap</button>
+										</div>
 									</div>
 								</div>
 							}
@@ -538,6 +541,7 @@
 	<script id="tum-kitaplar-data" type="application/json">@Html.Raw(kitapVerileriJson)</script>
 	<script id="tum-yazarlar-data" type="application/json">@Html.Raw(yazarVerileriJson)</script>
 	<script id="kullanici-puanlari-data" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.KullaniciPuanlari))</script>
+	<script id="mevcut-kullanici-adi-data" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(User.Identity != null && User.Identity.IsAuthenticated ? User.Identity.Name : null))</script>
 
 	<script src="~/js/bookland/bookland.js"></script>
 </body>

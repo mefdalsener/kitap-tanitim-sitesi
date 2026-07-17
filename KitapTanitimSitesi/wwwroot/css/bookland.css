@@ -988,21 +988,50 @@ body {
 
 .popup-puan {
     display: flex;
+    align-items: center;
     justify-content: flex-start;
-    gap: 4px;
+    gap: 3px;
     margin-top: 8px;
+    cursor: default;
 }
 
-    .popup-puan i {
-        color: #26313D;
+/* Kısmi (yüzdesel) dolu yıldız tekniği: her yıldız için altta gri bir
+   kopya, üstünde de genişliği JS ile (0-100%) ayarlanan, overflow:hidden
+   olan bir kapsayıcı içinde sarı bir kopya var. Genişlik %70 gibi bir
+   değere ayarlanınca sarı yıldız o oranda "kesilerek" görünür. */
+.popup-yildiz {
+    position: relative;
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    line-height: 15px;
+}
+
+    .popup-yildiz i {
+        position: absolute;
+        top: 0;
+        left: 0;
         font-size: 15px;
-        cursor: pointer;
-        transition: color 0.15s ease;
+        line-height: 15px;
     }
 
-        .popup-puan i.dolu {
-            color: #F5C518;
-        }
+    .popup-yildiz .popup-yildiz-arka {
+        color: #DCE8F2;
+    }
+
+.popup-yildiz-dolum {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 15px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+    .popup-yildiz-dolum i {
+        color: #F5C518;
+    }
 
 .popup-puan-ozet {
     margin-left: 6px;
@@ -1139,11 +1168,22 @@ body {
     gap: 12px;
 }
 
+.yorum-yaz-butonlar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
 .yorum-uyari {
     font-size: 12px;
     color: #E0664B;
     flex: 1;
 }
+
+    .yorum-uyari.basarili {
+        color: #4CAF7D;
+    }
 
 .yorum-gonder-btn {
     border: none;
@@ -1161,6 +1201,34 @@ body {
 
     .yorum-gonder-btn:hover {
         background: #4685B8;
+    }
+
+    .yorum-gonder-btn:disabled {
+        background: #C7D6E2;
+        cursor: default;
+    }
+
+.yorum-kaldir-btn {
+    border: none;
+    background: #E0664B;
+    color: #FFFFFF;
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    padding: 9px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+}
+
+    .yorum-kaldir-btn:hover {
+        background: #C24F38;
+    }
+
+    .yorum-kaldir-btn:disabled {
+        background: #EFC3B8;
+        cursor: default;
     }
 
 .yorum-giris-uyari {
@@ -1231,12 +1299,49 @@ body {
             color: #F5C518;
         }
 
+.yorum-karti-metin-sarmalayici {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 8px;
+}
+
 .yorum-karti-metin {
-    margin: 8px 0 0 0;
+    margin: 0;
     font-size: 14px;
     line-height: 1.5;
     color: #26313D;
     white-space: pre-wrap;
+}
+
+    .yorum-karti-metin.kisaltilmis {
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+.yorum-devamini-goster {
+    border: none;
+    background: transparent;
+    color: #599ED2;
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+}
+
+    .yorum-devamini-goster:hover {
+        text-decoration: underline;
+    }
+
+.yorum-yukleniyor {
+    text-align: center;
+    font-size: 14px;
+    color: #8CA3B8;
+    padding: 24px 0;
 }
 
 .yorum-bos-durum {
