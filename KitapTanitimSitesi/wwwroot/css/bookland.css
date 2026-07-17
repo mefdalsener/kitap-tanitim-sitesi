@@ -1491,3 +1491,171 @@ body {
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
+/* === PUANLARIM VE YORUMLARIM ALANI === */
+.puanlarim-grid {
+    flex-grow: 1;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    grid-gap: 24px;
+    padding: 24px;
+    align-content: start;
+    justify-content: start;
+}
+
+.puan-karti {
+    padding: 14px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 14px;
+    border-radius: 14px;
+    background-color: #FFFFFF;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .puan-karti:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 24px rgba(89,158,210,0.18);
+    }
+
+.puan-karti-kapak {
+    width: 76px;
+    flex-shrink: 0;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: 10px;
+    background: #F4F8FB;
+    box-shadow: 4px 6px 14px rgba(38,49,61,0.12);
+}
+
+    .puan-karti-kapak img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        object-position: center;
+    }
+
+.puan-karti-sag {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    flex: 1;
+}
+
+.puan-karti-ust {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.puan-karti-baslik {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    color: #26313D;
+}
+
+.puan-karti-yildizlar {
+    margin-top: 0;
+}
+
+.puan-karti-yorum-sarmalayici {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.puan-karti-yorum {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #26313D;
+    white-space: pre-wrap;
+}
+
+    .puan-karti-yorum.kisaltilmis {
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .puan-karti-yorum.puan-karti-yorum-bos {
+        color: #8CA3B8;
+        font-style: italic;
+    }
+
+.puan-karti-devami {
+    font-size: 12px;
+    font-weight: bold;
+    color: #599ED2;
+}
+
+/* === PUANLARIM POPUP === */
+.puanlarim-popup-ust-satir {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+    .puanlarim-popup-ust-satir .popup-baslik {
+        margin: 0;
+    }
+
+.puanlarim-popup-yildizlar {
+    margin-top: 0;
+}
+
+    .puanlarim-popup-yildizlar i {
+        font-size: 17px;
+    }
+
+.puanlarim-popup-yildizlar-duzenle {
+    margin: 0;
+}
+
+.puanlarim-duzenle-btn {
+    margin-top: 4px;
+}
+
+.puanlarim-popup-govde {
+    display: flex;
+    flex-direction: column;
+}
+
+.puanlarim-popup-yorum-metin {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #26313D;
+    white-space: pre-wrap;
+}
+
+.puanlarim-duzenle-textarea {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+    resize: none;
+    border: 1px solid #DCE8F2;
+    border-radius: 10px;
+    background: #FFFFFF;
+    color: #26313D;
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1.6;
+    padding: 12px 14px;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+}
+
+    .puanlarim-duzenle-textarea:focus {
+        border-color: #599ED2;
+    }

@@ -254,9 +254,11 @@ namespace KitapTanitimSitesi.Services
         private async Task<HtmlDocument> GetHtmlAsync(string url)
         {
             var html = await _httpClient.GetStringAsync(url);
+            System.IO.File.WriteAllText("debug_last_fetch.html", html); // geçici debug
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
             return doc;
+
         }
 
         private string CleanTextSingleLine(string html)

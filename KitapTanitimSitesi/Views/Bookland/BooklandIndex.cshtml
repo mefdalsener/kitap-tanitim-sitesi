@@ -114,6 +114,10 @@
 			<nav class="nav-buttons">
 				<button id="btn-kitaplar" class="nav-btn active">Kitaplar</button>
 				<button id="btn-yazarlar" class="nav-btn">Yazarlar</button>
+				@if (User.Identity != null && User.Identity.IsAuthenticated)
+				{
+					<button id="btn-puanlarim" class="nav-btn">Puanlarım ve Yorumlarım</button>
+				}
 			</nav>
 		</div>
 
@@ -363,6 +367,17 @@
 			</div>
 		</div>
 
+		<!-- PUANLARIM VE YORUMLARIM GÖRÜNÜMÜ -->
+		<div id="view-puanlarim" class="view-section">
+			<div class="author-area">
+				<main class="puanlarim-grid" id="puanlarim-grid"></main>
+
+				<div class="puanlarim-bos-durum" id="puanlarim-bos-durum" style="display:none;">
+					<img src="~/images/little-dragon-in-library.png" alt="Henüz puan verilmemiş" />
+					<p class="arama-bos-yazi">Henüz hiçbir kitaba puan vermedin.</p>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<!-- KİTAP POPUP -->
@@ -537,6 +552,47 @@
 		</div>
 	</div>
 
+	<!-- PUANLARIM POPUP -->
+	<div id="puanlarim-popup-overlay" class="popup-overlay" onclick="puanlarimPopupKapat()">
+		<div id="puanlarim-popup" class="popup-modal" onclick="event.stopPropagation()">
+
+			<button class="popup-kapat" onclick="puanlarimPopupKapat()">✕</button>
+
+			<div class="popup-icerik">
+
+				<div class="popup-sol">
+					<div class="popup-kapak yazar-kapak">
+						<img id="puanlarim-popup-kapak-img" src="" alt="" />
+					</div>
+				</div>
+
+				<div class="popup-sag">
+
+					<div class="popup-sag-sabit">
+						<div class="puanlarim-popup-ust-satir">
+							<h2 id="puanlarim-popup-kitap-adi" class="popup-baslik"></h2>
+							<span class="yorum-karti-yildizlar puanlarim-popup-yildizlar" id="puanlarim-popup-yildizlar-goster"></span>
+							<div class="yorum-yildiz-secici puanlarim-popup-yildizlar-duzenle" id="puanlarim-popup-yildizlar-duzenle" style="display:none;">
+								<i class="fa-solid fa-star" data-yildiz="1"></i>
+								<i class="fa-solid fa-star" data-yildiz="2"></i>
+								<i class="fa-solid fa-star" data-yildiz="3"></i>
+								<i class="fa-solid fa-star" data-yildiz="4"></i>
+								<i class="fa-solid fa-star" data-yildiz="5"></i>
+							</div>
+						</div>
+						<button type="button" class="yorum-gonder-btn puanlarim-duzenle-btn" id="puanlarim-duzenle-btn" onclick="puanlarimDuzenleToggle()">Yorumu Düzenle</button>
+					</div>
+
+					<div class="popup-sag-kaydirilabilir puanlarim-popup-govde" id="puanlarim-popup-govde">
+						<p id="puanlarim-popup-yorum-metin" class="puanlarim-popup-yorum-metin"></p>
+						<textarea id="puanlarim-popup-yorum-duzenle" class="puanlarim-duzenle-textarea" maxlength="2000" style="display:none;"></textarea>
+					</div>
+
+				</div>
+
+			</div>
+		</div>
+	</div>
 	<!-- Seri / ilgili kitap mantığı ve yazar->kitap ters ilişkisi için tüm kitapların özet verisi -->
 	<script id="tum-kitaplar-data" type="application/json">@Html.Raw(kitapVerileriJson)</script>
 	<script id="tum-yazarlar-data" type="application/json">@Html.Raw(yazarVerileriJson)</script>
