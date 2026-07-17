@@ -16,7 +16,7 @@ namespace KitapTanitimSitesi.Models
         [Required, Range(1, 5)]
         public byte RatingValue { get; set; }
 
-        [MaxLength(10000)]
+        [MaxLength(50000)]
         public string? Comment { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
