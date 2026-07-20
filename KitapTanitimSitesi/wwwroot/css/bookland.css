@@ -1736,3 +1736,52 @@ body {
     .puanlarim-duzenle-textarea:focus {
         border-color: #599ED2;
     }
+
+.sayfalama {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 20px 12px;
+}
+
+    .sayfalama.gorunur {
+        display: flex;
+    }
+
+.sayfa-buton {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 10px;
+    border: 1px solid #DCE8F2;
+    background-color: #FFFFFF;
+    color: #26313D;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+    .sayfa-buton:hover:not(:disabled):not(.aktif) {
+        background-color: #EAF2F9;
+        border-color: #599ED2;
+    }
+
+    .sayfa-buton.aktif {
+        background-color: #599ED2;
+        border-color: #599ED2;
+        color: #FFFFFF;
+        cursor: default;
+    }
+
+    .sayfa-buton:disabled {
+        opacity: 0.35;
+        cursor: default;
+    }
+
+.sayfa-nokta {
+    color: #7C8A99;
+    font-size: 13px;
+    padding: 0 4px;
+}

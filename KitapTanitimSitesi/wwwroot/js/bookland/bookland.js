@@ -11,13 +11,20 @@ const tumKitaplar = JSON.parse(
 const kitapMap = {};
 tumKitaplar.forEach((k) => (kitapMap[k.id] = k));
 
-
-
 const tumYazarlar = JSON.parse(
     document.getElementById("tum-yazarlar-data").textContent,
 );
 const yazarMap = {};
 tumYazarlar.forEach((y) => (yazarMap[y.id] = y));
+
+// --- SAYFALAMA ---
+// Filtreleme (checkbox'lar, arama, puan, sayfa aralığı) her zaman
+// tumKitaplar'ın tamamı üzerinden çalışır; sonuç guncelFiltrelenmisKitaplar'da
+// tutulur ve ekrana sadece o an seçili sayfaya denk gelen SAYFA_BOYUTU
+// kadarlık dilim basılır.
+const SAYFA_BOYUTU = 25;
+let mevcutSayfa = 1;
+let guncelFiltrelenmisKitaplar = [];
 
 // Giriş yapmış kullanıcının önceden verdiği puanlar: { bookId: puan }.
 // Popup açıldığında yıldızları doğru boyamak, yeni puan verildiğinde de
@@ -322,7 +329,7 @@ function rangeDurumunuURLyeYaz() {
     });
 }
 
-function filtreUygula() {
+function filtreUygula(sayfaSifirla = true) {
     const yazarSecili = seciliDegerleriAl("yazar");
     const yayineviSecili = seciliDegerleriAl("yayinevi");
     const cevirmenSecili = seciliDegerleriAl("cevirmen");
@@ -331,6 +338,12 @@ function filtreUygula() {
 
     const sayfaMin = parseInt(document.getElementById("range-min").value);
     const sayfaMax = parseInt(document.getElementById("range-max").value);
+
+    // Arama kutusu artık DOM'da kart gizleyerek değil, diğer filtrelerle
+    // aynı array.filter() adımında çalışıyor — böylece sayfalanmış bir
+    // sonuç üzerinde bile arama tüm 500 kitabı kapsamaya devam ediyor.
+    const aramaInput = document.getElementById("kitap-arama-input");
+    const aramaSorgusu = aramaInput ? normalizeMetin(aramaInput.value) : "";
 
     let filtrelenmis = tumKitaplar.filter((kitap) => {
         if (!diziKesisiyorMu(kitap.yazarIds, yazarSecili)) return false;
@@ -351,6 +364,10 @@ function filtreUygula() {
 
         if (!kitapPuanFiltresineUyuyorMu(kitap)) return false;
 
+        if (aramaSorgusu && !normalizeMetin(kitap.ad).includes(aramaSorgusu)) {
+            return false;
+        }
+
         return true;
     });
 
@@ -364,11 +381,101 @@ function filtreUygula() {
         filtrelenmis.sort((a, b) => a.ad.localeCompare(b.ad, "tr-TR"));
     }
 
-    kitaplariRenderEt(filtrelenmis);
+    guncelFiltrelenmisKitaplar = filtrelenmis;
+    if (sayfaSifirla) mevcutSayfa = 1;
+
+    sayfayiRenderEt();
     filtreSecenekleriniGuncelle();
-    // Filtreler kart listesini sıfırdan oluşturduğu için, arama kutusunda
-    // hâlâ bir metin varsa arama filtresini de yeniden uygula
-    kitapAramaFiltrele();
+    filtreEtiketleriniGuncelle();
+}
+
+function sayfayiRenderEt() {
+    const toplamKitap = guncelFiltrelenmisKitaplar.length;
+    const toplamSayfa = Math.max(1, Math.ceil(toplamKitap / SAYFA_BOYUTU));
+    if (mevcutSayfa > toplamSayfa) mevcutSayfa = toplamSayfa;
+
+    const baslangic = (mevcutSayfa - 1) * SAYFA_BOYUTU;
+    const sayfaKitaplari = guncelFiltrelenmisKitaplar.slice(
+        baslangic,
+        baslangic + SAYFA_BOYUTU,
+    );
+
+    kitaplariRenderEt(sayfaKitaplari);
+    sayfalamaRenderEt(toplamSayfa);
+
+    if (toplamKitap === 0) {
+        aramaBosDurumGoster();
+    } else {
+        aramaBosDurumGizle();
+    }
+}
+
+function sayfayaGit(hedefSayfa) {
+    const toplamSayfa = Math.max(
+        1,
+        Math.ceil(guncelFiltrelenmisKitaplar.length / SAYFA_BOYUTU),
+    );
+    const yeniSayfa = Math.min(Math.max(1, hedefSayfa), toplamSayfa);
+    if (yeniSayfa === mevcutSayfa) return;
+
+    mevcutSayfa = yeniSayfa;
+    sayfayiRenderEt();
+    urlGuncelle({ sayfa: mevcutSayfa > 1 ? mevcutSayfa : null });
+    document.getElementById("book-grid").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// << ilk sayfa, < önceki, [numaralar], > sonraki, >> son sayfa
+function sayfalamaRenderEt(toplamSayfa) {
+    const kapsayici = document.getElementById("sayfalama");
+    if (!kapsayici) return;
+    kapsayici.innerHTML = "";
+
+    if (toplamSayfa <= 1) {
+        kapsayici.classList.remove("gorunur");
+        return;
+    }
+    kapsayici.classList.add("gorunur");
+
+    const butonEkle = (etiket, hedefSayfa, opts = {}) => {
+        const buton = document.createElement("button");
+        buton.type = "button";
+        buton.className = "sayfa-buton" + (opts.aktif ? " aktif" : "");
+        buton.textContent = etiket;
+        buton.disabled = !!opts.devreDisi;
+        buton.setAttribute("aria-label", opts.ariaLabel || etiket);
+        if (!opts.devreDisi && !opts.aktif) {
+            buton.addEventListener("click", () => sayfayaGit(hedefSayfa));
+        }
+        kapsayici.appendChild(buton);
+    };
+
+    const noktaEkle = () => {
+        const span = document.createElement("span");
+        span.className = "sayfa-nokta";
+        span.textContent = "…";
+        kapsayici.appendChild(span);
+    };
+
+    butonEkle("«", 1, { devreDisi: mevcutSayfa === 1, ariaLabel: "İlk sayfa" });
+    butonEkle("‹", mevcutSayfa - 1, { devreDisi: mevcutSayfa === 1, ariaLabel: "Önceki sayfa" });
+
+    const pencereBasi = Math.max(1, mevcutSayfa - 2);
+    const pencereSonu = Math.min(toplamSayfa, mevcutSayfa + 2);
+
+    if (pencereBasi > 1) {
+        butonEkle("1", 1);
+        if (pencereBasi > 2) noktaEkle();
+    }
+    for (let s = pencereBasi; s <= pencereSonu; s++) {
+        butonEkle(String(s), s, { aktif: s === mevcutSayfa });
+    }
+    if (pencereSonu < toplamSayfa) {
+        if (pencereSonu < toplamSayfa - 1) noktaEkle();
+        butonEkle(String(toplamSayfa), toplamSayfa);
+    }
+
+    butonEkle("›", mevcutSayfa + 1, { devreDisi: mevcutSayfa === toplamSayfa, ariaLabel: "Sonraki sayfa" });
+    butonEkle("»", toplamSayfa, { devreDisi: mevcutSayfa === toplamSayfa, ariaLabel: "Son sayfa" });
 }
 
 // --- KADEMELİ (FACETED) FİLTRELEME ---
@@ -1645,27 +1752,10 @@ function filtreEtiketleriniGuncelle() {
 // deger verilmezse (örn. filtreUygula() içinden çağrıldığında) mevcut
 // arama kutusunun değeri kullanılır.
 function kitapAramaFiltrele(deger) {
-    const girisDegeri =
-        deger !== undefined ? deger : document.getElementById("kitap-arama-input").value;
-    const sorgu = normalizeMetin(girisDegeri);
-    const kartlar = document.querySelectorAll("#view-kitaplar .book-card");
-
-    let gorunenSayisi = 0;
-    kartlar.forEach((kart) => {
-        const baslikEl = kart.querySelector(".book-title");
-        const baslik = normalizeMetin(baslikEl.textContent);
-        const eslesiyor = sorgu === "" || baslik.includes(sorgu);
-        kart.style.display = eslesiyor ? "flex" : "none";
-        if (eslesiyor) gorunenSayisi++;
-    });
-
-    if (gorunenSayisi === 0) {
-        aramaBosDurumGoster();
-    } else {
-        aramaBosDurumGizle();
+    if (deger !== undefined) {
+        document.getElementById("kitap-arama-input").value = deger;
     }
-
-    filtreEtiketleriniGuncelle();
+    filtreUygula();
 }
 
 // Kullanıcı yazarken: anlık filtrele + URL'yi sessizce güncelle (replaceState).
@@ -1758,9 +1848,12 @@ function URLdenDurumUygula() {
     secilenPuanFiltresi = puanParam ? Number(puanParam) : null;
     puanFiltresiKutulariniGuncelle();
 
+    // Sayfa numarası (paylaşılan linkte belirli bir sayfaya dönmek için)
+    const sayfaParam = parseInt(params.get("sayfa"), 10);
+    mevcutSayfa = Number.isInteger(sayfaParam) && sayfaParam > 0 ? sayfaParam : 1;
+
     // Filtreleri ve aramayı uygula (bu, filtreSecenekleriniGuncelle'yi de tetikler)
-    filtreUygula();
-    kitapAramaFiltrele(q);
+    filtreUygula(false);
     yazarAramaFiltrele(qy);
 
     // Popup'lar: URL'de ilgili id varsa aç, yoksa kapat
