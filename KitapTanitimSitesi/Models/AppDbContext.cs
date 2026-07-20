@@ -47,7 +47,10 @@ namespace KitapTanitimSitesi.Models
             modelBuilder.Entity<BookRating>()
                 .HasIndex(br => new { br.BookID, br.UserID })
                 .IsUnique();
-                
+
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.PublicId)
+                .IsUnique();
         }
     }
 }

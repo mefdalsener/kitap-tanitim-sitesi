@@ -25,6 +25,7 @@ namespace KitapTanitimSitesi.Controllers
         }
 
         // POST: /Account/Register
+        // POST: /Account/Register
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(SignupIndex model)
@@ -46,7 +47,6 @@ namespace KitapTanitimSitesi.Controllers
                 return View(model);
             }
 
-            // Şifreyi BCrypt ile hash'le
             var user = new User
             {
                 Username = model.Username,
@@ -57,12 +57,57 @@ namespace KitapTanitimSitesi.Controllers
                 UpdatedAt = DateTime.Now
             };
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            const int maxRetries = 5;
+            bool saved = false;
 
-            // Kayıt sonrası otomatik giriş yapmak istersen burada SignInAsync çağrılabilir
-            // (şimdilik metinde belirtilmediği için Login sayfasına yönlendiriyoruz)
+            for (int attempt = 0; attempt < maxRetries && !saved; attempt++)
+            {
+                user.PublicId = await GenerateUniquePublicIdAsync();
+
+                try
+                {
+                    _context.Users.Add(user);
+                    await _context.SaveChangesAsync();
+                    saved = true;
+                }
+                catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+                {
+                    _context.Entry(user).State = EntityState.Detached;
+                }
+            }
+
+            if (!saved)
+            {
+                ModelState.AddModelError("", "Kayıt sırasında bir hata oluştu, lütfen tekrar deneyin.");
+                return View(model);
+            }
+
             return RedirectToAction("Login");
+        }
+
+        // Rastgele + benzersiz 9 haneli PublicId üretir: "YY" + 7 haneli rastgele sayı
+        private async Task<string> GenerateUniquePublicIdAsync()
+        {
+            var rng = new Random();
+            string yearPrefix = (DateTime.Now.Year % 100).ToString("D2");
+            string candidateId;
+            bool exists;
+
+            do
+            {
+                int randomPart = rng.Next(0, 10_000_000);
+                candidateId = yearPrefix + randomPart.ToString("D7");
+                exists = await _context.Users.AnyAsync(u => u.PublicId == candidateId);
+            }
+            while (exists);
+
+            return candidateId;
+        }
+
+        private bool IsUniqueConstraintViolation(DbUpdateException ex)
+        {
+            return ex.InnerException is Microsoft.Data.SqlClient.SqlException sqlEx &&
+                   (sqlEx.Number == 2627 || sqlEx.Number == 2601);
         }
 
         // GET: /Account/Login

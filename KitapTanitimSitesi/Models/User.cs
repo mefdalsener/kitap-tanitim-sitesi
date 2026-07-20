@@ -6,6 +6,9 @@ namespace KitapTanitimSitesi.Models
     {
         public int Id { get; set; }
 
+        [Required, MaxLength(9)]
+        public string PublicId { get; set; } = null!;
+
         [Required, MaxLength(50)]
         public string Username { get; set; }
 
@@ -15,7 +18,6 @@ namespace KitapTanitimSitesi.Models
         [Required]
         public string PasswordHash { get; set; }
 
-        // "user" veya "admin"
         [Required, MaxLength(10)]
         public string Role { get; set; } = "user";
 

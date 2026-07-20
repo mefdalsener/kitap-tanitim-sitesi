@@ -4,6 +4,7 @@ using KitapTanitimSitesi.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KitapTanitimSitesi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260720070249_AddPublicId_Nullable")]
+    partial class AddPublicId_Nullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -291,7 +294,6 @@ namespace KitapTanitimSitesi.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PublicId")
-                        .IsRequired()
                         .HasMaxLength(9)
                         .HasColumnType("nvarchar(9)");
 
@@ -314,7 +316,8 @@ namespace KitapTanitimSitesi.Migrations
                         .IsUnique();
 
                     b.HasIndex("PublicId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[PublicId] IS NOT NULL");
 
                     b.HasIndex("Username")
                         .IsUnique();
