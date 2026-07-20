@@ -11,6 +11,8 @@ const tumKitaplar = JSON.parse(
 const kitapMap = {};
 tumKitaplar.forEach((k) => (kitapMap[k.id] = k));
 
+
+
 const tumYazarlar = JSON.parse(
     document.getElementById("tum-yazarlar-data").textContent,
 );
@@ -95,66 +97,31 @@ if (btnPuanlarim) {
 
 // --- Popup yıldız gösterimi (salt-okunur, ortalamaya göre kısmi dolum) ---
 const popupPuanKapsayici = document.getElementById("popup-puan");
-let secilenPuanFiltresi = null; // Sol menüdeki "Puan" filtresinde seçili yıldız (1-5) veya null
+let secilenPuanFiltresi = null; // Sol menüdeki "Puan" filtresinde seçili eşik (1-4, "N ve üzeri") veya null
 
-// Sol menüdeki puan filtresi için: seçilen yıldıza göre ortalama puan aralığı.
-// 1: [1.0, 1.5] | 2: [1.5, 2.4] | 3: [2.5, 3.4] | 4: [3.5, 4.4] | 5: [4.5, 5.0]
-function puanAraligiHesapla(yildiz) {
-    switch (yildiz) {
-        case 1: return { min: 1.0, max: 1.4 };
-        case 2: return { min: 1.5, max: 2.4 };
-        case 3: return { min: 2.5, max: 3.4 };
-        case 4: return { min: 3.5, max: 4.4 };
-        case 5: return { min: 4.5, max: 5.0 };
-        default: return null;
-    }
-}
-
-// Yıldızları kümülatif olarak boyar: 4 verilirse 1-2-3-4 sarı yanar.
-// Hem gerçek seçim durumunu göstermek hem de hover ön izlemesi için kullanılır.
-function puanFiltresiYildizlariBoya(kacTane) {
-    const kapsayici = document.getElementById("filter-puan-yildizlar");
+// Yıldız kutularından seçili olanı vurgular (tek seçimli).
+function puanFiltresiKutulariniGuncelle() {
+    const kapsayici = document.getElementById("puan-secenekler");
     if (!kapsayici) return;
-    kapsayici.querySelectorAll("i").forEach((yildiz) => {
-        const deger = Number(yildiz.dataset.yildiz);
-        yildiz.classList.toggle("secili", deger <= kacTane);
+    kapsayici.querySelectorAll(".puan-secenek").forEach((kutu) => {
+        const deger = Number(kutu.dataset.puan);
+        kutu.classList.toggle("secili", deger === secilenPuanFiltresi);
     });
 }
 
-function puanFiltresiYildizlariGuncelle() {
-    puanFiltresiYildizlariBoya(secilenPuanFiltresi || 0);
-}
-
-// Bir yıldıza tıklanınca: zaten seçiliyse kaldırılır (toggle), değilse seçilir.
+// Bir kutuya tıklanınca: zaten seçiliyse kaldırılır (toggle), değilse seçilir.
 function puanFiltresiSec(deger) {
     secilenPuanFiltresi = secilenPuanFiltresi === deger ? null : deger;
-    puanFiltresiYildizlariGuncelle();
+    puanFiltresiKutulariniGuncelle();
     filtreUygula();
     urlGuncelle({ puan: secilenPuanFiltresi || null });
 }
 
+// "N★ ve üzeri": kitabın ortalama puanı seçilen eşik değerinden büyük ya da eşit olmalı.
 function kitapPuanFiltresineUyuyorMu(kitap) {
     if (!secilenPuanFiltresi) return true;
     if (kitap.puanOrtalama == null || !kitap.oySayisi) return false;
-    const araligi = puanAraligiHesapla(secilenPuanFiltresi);
-    return kitap.puanOrtalama >= araligi.min && kitap.puanOrtalama <= araligi.max;
-}
-
-// Sol menüdeki puan filtresi: yıldızın üzerine gelince o yıldıza kadar
-// (kümülatif) ön izleme gösterilir, fareyle çıkınca gerçek seçim geri gelir.
-const filtrePuanKapsayici = document.getElementById("filter-puan-yildizlar");
-if (filtrePuanKapsayici) {
-    const filtreYildizlari = Array.from(filtrePuanKapsayici.querySelectorAll("i"));
-
-    filtreYildizlari.forEach((yildiz) => {
-        yildiz.addEventListener("mouseenter", () => {
-            puanFiltresiYildizlariBoya(Number(yildiz.dataset.yildiz));
-        });
-    });
-
-    filtrePuanKapsayici.addEventListener("mouseleave", () => {
-        puanFiltresiYildizlariGuncelle();
-    });
+    return kitap.puanOrtalama >= secilenPuanFiltresi;
 }
 
 // Yayınevinin altındaki yıldızlar artık tıklanamaz; sadece kitabın ortalama
@@ -224,6 +191,21 @@ function aramaYap(filtre, aramaMetni) {
     });
 }
 
+function sayfaTrackGuncelle() {
+    const rangeMin = document.getElementById("range-min");
+    const rangeMax = document.getElementById("range-max");
+    const aktifTrack = document.getElementById("range-track-active");
+    if (!rangeMin || !rangeMax || !aktifTrack) return;
+
+    const min = parseFloat(rangeMin.min);
+    const max = parseFloat(rangeMin.max);
+    const minYuzde = ((parseFloat(rangeMin.value) - min) / (max - min)) * 100;
+    const maxYuzde = ((parseFloat(rangeMax.value) - min) / (max - min)) * 100;
+
+    aktifTrack.style.left = minYuzde + "%";
+    aktifTrack.style.right = (100 - maxYuzde) + "%";
+}
+
 function rangeGuncelle() {
     const min = parseInt(document.getElementById("range-min").value);
     const max = parseInt(document.getElementById("range-max").value);
@@ -236,6 +218,7 @@ function rangeGuncelle() {
     document.getElementById("range-max-label").textContent =
         document.getElementById("range-max").value;
 
+    sayfaTrackGuncelle();
     filtreUygula();
 }
 
@@ -501,10 +484,11 @@ function filtreleriSifirla() {
     rangeMax.value = rangeMax.max;
     document.getElementById("range-min-label").textContent = rangeMin.min;
     document.getElementById("range-max-label").textContent = rangeMax.max;
+    sayfaTrackGuncelle();
 
     // Puan filtresini de sıfırla
     secilenPuanFiltresi = null;
-    puanFiltresiYildizlariGuncelle();
+    puanFiltresiKutulariniGuncelle();
 
     // Açık filtre panellerini kapat (isteğe bağlı, ister kaldır)
     document.querySelectorAll(".filter-item.open").forEach((item) => {
@@ -1341,6 +1325,57 @@ function puanlarimDuzenleToggle() {
     }
 }
 
+// "Yorumu Sil ✕" butonuna basılınca çalışır: puanlarım popup'ındaki kitabın
+// puanını ve yorumunu tamamen siler, ardından o kitabı puanlarım gridinden kaldırır.
+async function puanlarimYorumSil() {
+    if (!aktifPuanlarimKitapId) return;
+    if (!confirm("Puanını ve yorumunu silmek istediğine emin misin?")) return;
+
+    const silBtn = document.getElementById("puanlarim-sil-btn");
+    const duzenleBtn = document.getElementById("puanlarim-duzenle-btn");
+    silBtn.disabled = true;
+    duzenleBtn.disabled = true;
+
+    try {
+        const csrfToken = document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content");
+
+        const yanit = await fetch("/Bookland/PuanKaldir", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": csrfToken || "",
+            },
+            body: JSON.stringify({ bookId: aktifPuanlarimKitapId }),
+        });
+
+        if (!yanit.ok) {
+            alert("Silinemedi, tekrar dene.");
+            return;
+        }
+
+        const sonuc = await yanit.json();
+        const kitap = kitapMap[aktifPuanlarimKitapId];
+
+        if (kitap) {
+            kitap.puanOrtalama = sonuc.averageRating;
+            kitap.oySayisi = sonuc.ratingCount;
+            puanRozetiniGuncelle(aktifPuanlarimKitapId, kitap);
+            await yorumlariYukle(aktifPuanlarimKitapId, true);
+        }
+        delete kullaniciPuanlari[aktifPuanlarimKitapId];
+
+        puanlarimPopupKapat();
+        puanlarimRenderEt();
+    } catch (hata) {
+        alert("Silinemedi, tekrar dene.");
+    } finally {
+        silBtn.disabled = false;
+        duzenleBtn.disabled = false;
+    }
+}
+
 async function puanlarimKaydet() {
     if (!aktifPuanlarimKitapId) return;
 
@@ -1567,7 +1602,7 @@ function filtreEtiketleriniGuncelle() {
                 () => {
                     puanFiltresiSec(secilenPuanFiltresi); // zaten seçiliyken çağrılınca kaldırır
                 },
-                `Puan: ${secilenPuanFiltresi} yıldız`,
+                `${secilenPuanFiltresi}★ ve üzeri`,
             ),
         );
     }
@@ -1716,11 +1751,12 @@ function URLdenDurumUygula() {
     rangeMax.value = params.get("sayfaMax") || rangeMax.max;
     document.getElementById("range-min-label").textContent = rangeMin.value;
     document.getElementById("range-max-label").textContent = rangeMax.value;
+    sayfaTrackGuncelle();
 
     // Puan filtresi (tek seçimli yıldız)
     const puanParam = params.get("puan");
     secilenPuanFiltresi = puanParam ? Number(puanParam) : null;
-    puanFiltresiYildizlariGuncelle();
+    puanFiltresiKutulariniGuncelle();
 
     // Filtreleri ve aramayı uygula (bu, filtreSecenekleriniGuncelle'yi de tetikler)
     filtreUygula();

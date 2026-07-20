@@ -270,12 +270,19 @@
 							<span class="filter-arrow">▼</span>
 						</div>
 						<div class="filter-content" id="content-puan">
-							<div class="filter-puan-yildizlar" id="filter-puan-yildizlar">
-								<i class="fa-solid fa-star" data-yildiz="1" onclick="puanFiltresiSec(1)"></i>
-								<i class="fa-solid fa-star" data-yildiz="2" onclick="puanFiltresiSec(2)"></i>
-								<i class="fa-solid fa-star" data-yildiz="3" onclick="puanFiltresiSec(3)"></i>
-								<i class="fa-solid fa-star" data-yildiz="4" onclick="puanFiltresiSec(4)"></i>
-								<i class="fa-solid fa-star" data-yildiz="5" onclick="puanFiltresiSec(5)"></i>
+							<div class="puan-secenekler" id="puan-secenekler">
+								<button type="button" class="puan-secenek" data-puan="1" onclick="puanFiltresiSec(1)">
+									<i class="fa-solid fa-star"></i> 1★ ve üzeri
+								</button>
+								<button type="button" class="puan-secenek" data-puan="2" onclick="puanFiltresiSec(2)">
+									<i class="fa-solid fa-star"></i> 2★ ve üzeri
+								</button>
+								<button type="button" class="puan-secenek" data-puan="3" onclick="puanFiltresiSec(3)">
+									<i class="fa-solid fa-star"></i> 3★ ve üzeri
+								</button>
+								<button type="button" class="puan-secenek" data-puan="4" onclick="puanFiltresiSec(4)">
+									<i class="fa-solid fa-star"></i> 4★ ve üzeri
+								</button>
 							</div>
 						</div>
 					</div>
@@ -288,10 +295,12 @@
 						</div>
 						<div class="filter-content" id="content-sayfa">
 							<div class="range-labels">
-								<span id="range-min-label">@sayfaMinDeger</span>
-								<span id="range-max-label">@sayfaMaxDeger</span>
+								<span><span id="range-min-label">@sayfaMinDeger</span> sayfa</span>
+								<span><span id="range-max-label">@sayfaMaxDeger</span> sayfa</span>
 							</div>
 							<div class="range-container">
+								<div class="range-track"></div>
+								<div class="range-track-active" id="range-track-active"></div>
 								<input type="range" id="range-min" min="@sayfaMinDeger" max="@sayfaMaxDeger" value="@sayfaMinDeger" step="10" oninput="rangeGuncelle()" onchange="rangeDurumunuURLyeYaz()" />
 								<input type="range" id="range-max" min="@sayfaMinDeger" max="@sayfaMaxDeger" value="@sayfaMaxDeger" step="10" oninput="rangeGuncelle()" onchange="rangeDurumunuURLyeYaz()" />
 							</div>
@@ -580,7 +589,10 @@
 								<i class="fa-solid fa-star" data-yildiz="5"></i>
 							</div>
 						</div>
-						<button type="button" class="yorum-gonder-btn puanlarim-duzenle-btn" id="puanlarim-duzenle-btn" onclick="puanlarimDuzenleToggle()">Yorumu Düzenle</button>
+						<div class="puanlarim-duzenle-satir">
+							<button type="button" class="yorum-gonder-btn puanlarim-duzenle-btn" id="puanlarim-duzenle-btn" onclick="puanlarimDuzenleToggle()">Yorumu Düzenle</button>
+							<button type="button" class="yorum-kaldir-btn puanlarim-sil-btn" id="puanlarim-sil-btn" onclick="puanlarimYorumSil()">Yorumu Sil ✕</button>
+						</div>
 					</div>
 
 					<div class="popup-sag-kaydirilabilir puanlarim-popup-govde" id="puanlarim-popup-govde">

@@ -455,36 +455,74 @@ body {
     margin: 8px 0;
 }
 
-    .range-container input[type="range"] {
-        position: absolute;
-        width: 100%;
-        height: 4px;
-        background: transparent;
-        pointer-events: none;
+.range-track {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    transform: translateY(-50%);
+    height: 4px;
+    background: #E3E9F0;
+    border-radius: 2px;
+}
+
+.range-track-active {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 4px;
+    background: #599ED2;
+    border-radius: 2px;
+}
+
+.range-container input[type="range"] {
+    position: absolute;
+    width: 100%;
+    height: 4px;
+    background: transparent;
+    pointer-events: none;
+    appearance: none;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+    .range-container input[type="range"]::-webkit-slider-thumb {
         appearance: none;
-        top: 50%;
-        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #599ED2;
+        cursor: pointer;
+        pointer-events: all;
+        border: 2px solid #FFFFFF;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.2);
     }
 
-        .range-container input[type="range"]::-webkit-slider-thumb {
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: #599ED2;
-            cursor: pointer;
-            pointer-events: all;
-            border: 2px solid #FFFFFF;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-        }
+    .range-container input[type="range"]::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #599ED2;
+        cursor: pointer;
+        pointer-events: all;
+        border: 2px solid #FFFFFF;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
 
 .range-labels {
     display: flex;
     justify-content: space-between;
-    font-size: 13px;
-    color: #599ED2;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
 }
+
+    .range-labels span {
+        background: #EAF2FA;
+        color: #3A7CB5;
+        font-weight: 600;
+        font-size: 13px;
+        padding: 3px 10px;
+        border-radius: 12px;
+    }
 
 /* === KİTAP ALANI === */
 .kitaplar-icerik {
@@ -618,27 +656,55 @@ body {
         line-height: 1;
     }
 
-/* Sol menüdeki "Puan" filtresi: tek seçimli 5 yıldız */
-.filter-puan-yildizlar {
+/* Sol menüdeki "Puan" filtresi: tek seçimli 4 kutu ("N★ ve üzeri") */
+.puan-secenekler {
     display: flex;
+    flex-direction: column;
     gap: 8px;
-    padding: 4px 2px;
+    padding: 6px 2px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
-    .filter-puan-yildizlar i {
-        font-size: 20px;
-        color: #C9D3DC;
-        cursor: pointer;
-        transition: color 0.15s ease, transform 0.1s ease;
+.puan-secenek {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: 500;
+    color: #26313D;
+    background: #FFFFFF;
+    border: 1px solid #E3E9F0;
+    border-radius: 8px;
+    padding: 9px 12px;
+    cursor: pointer;
+    text-align: left;
+    box-shadow: 0 1px 3px rgba(38, 49, 61, 0.06);
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+    .puan-secenek i {
+        color: #F5C518;
+        font-size: 14px;
+        filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
     }
 
-        .filter-puan-yildizlar i:hover {
-            transform: scale(1.1);
-        }
+    .puan-secenek:hover {
+        background: #EAF3FB;
+        border-color: #A9C9E3;
+        transform: translateX(2px);
+        box-shadow: 0 2px 6px rgba(89, 158, 210, 0.15);
+    }
 
-        .filter-puan-yildizlar i.secili {
-            color: #F5C518;
-        }
+    .puan-secenek.secili {
+        background: #599ED2;
+        border-color: #599ED2;
+        color: #FFFFFF;
+        font-weight: 600;
+        box-shadow: 0 2px 6px rgba(89, 158, 210, 0.35);
+    }
 
 /* === ARAMA SONUCU BULUNAMADI (EJDERHA) DURUMU === */
 .arama-bos-durum {
@@ -1620,8 +1686,19 @@ body {
     margin: 0;
 }
 
-.puanlarim-duzenle-btn {
+.puanlarim-duzenle-satir {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-top: 4px;
+}
+
+.puanlarim-duzenle-btn {
+    margin-top: 0;
+}
+
+.puanlarim-sil-btn {
+    margin-top: 0;
 }
 
 .puanlarim-popup-govde {
