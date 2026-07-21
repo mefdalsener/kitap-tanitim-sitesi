@@ -1,4 +1,7 @@
-﻿namespace KitapTanitimSitesi.Models
+﻿using OpenQA.Selenium.DevTools.V147.DOMSnapshot;
+using System.Runtime.Serialization;
+
+namespace KitapTanitimSitesi.Models
 {
     public class Book
     {

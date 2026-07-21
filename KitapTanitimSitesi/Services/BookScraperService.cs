@@ -22,20 +22,42 @@ namespace KitapTanitimSitesi.Services
             var result = new SchemaResult();
 
             if (!string.IsNullOrWhiteSpace(kitapyurduUrl))
-                if (!string.IsNullOrWhiteSpace(kitapyurduUrl))
-                {
-                    result.KitapyurduUrl = kitapyurduUrl;
-                    await ScrapeKitapyurduAsync(kitapyurduUrl, result);
-                }
+            {
+                result.KitapyurduUrl = kitapyurduUrl;
+                await ScrapeKitapyurduAsync(kitapyurduUrl, result);
+            }
 
-            // Goodreads linki elle verilmediyse, ISBN üzerinden Selenium ile çözülür
-            // (Goodreads search -> book/show yönlendirmesi JavaScript tabanlı olduğu için
-            // HttpClient/GetAsync bunu YAKALAYAMAZ, tarayıcı gerekir).
+            Console.WriteLine($"[DEBUG] ISBN: {result.BookPublishers.ISBN}, goodreadsUrl (öncesi): {goodreadsUrl}");
+            DebugLog($"ISBN: {result.BookPublishers.ISBN}, goodreadsUrl (öncesi): {goodreadsUrl}");
+
             if (string.IsNullOrWhiteSpace(goodreadsUrl) && !string.IsNullOrWhiteSpace(result.BookPublishers.ISBN))
                 goodreadsUrl = ResolveGoodreadsBookUrl(result.BookPublishers.ISBN);
 
+            Console.WriteLine($"[DEBUG] goodreadsUrl (sonrası): {goodreadsUrl}");
+            DebugLog($"goodreadsUrl (sonrası): {goodreadsUrl}");
+
             if (!string.IsNullOrWhiteSpace(goodreadsUrl))
-                await ScrapeGoodreadsAsync(goodreadsUrl, result);
+            {
+                try
+                {
+                    Console.WriteLine("[DEBUG] Goodreads scraping başlıyor...");
+                    DebugLog("Goodreads scraping başlıyor...");
+                    await ScrapeGoodreadsAsync(goodreadsUrl, result);
+                    Console.WriteLine("[DEBUG] Goodreads scraping bitti.");
+                    DebugLog("Goodreads scraping bitti.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[DEBUG] GOODREADS HATASI: {ex.GetType().Name} - {ex.Message}");
+                    Console.WriteLine(ex.StackTrace);
+                    DebugLog($"GOODREADS HATASI: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}");
+                }
+            }
+            else
+            {
+                Console.WriteLine("[DEBUG] goodreadsUrl boş, Goodreads adımı atlandı.");
+                DebugLog("goodreadsUrl boş, Goodreads adımı atlandı.");
+            }
 
             return result;
         }
@@ -102,7 +124,10 @@ namespace KitapTanitimSitesi.Services
             // (ResolveGoodreadsBookUrl tarafından bulunmuş ya da admin panelden elle girilmiştir).
             result.GoodreadsUrl = url;
 
-            var doc = await GetHtmlAsync(url);
+            // Goodreads, düz HttpClient isteklerini bot koruması (202/boş içerik) ile
+            // engelliyor; bu yüzden burada gerçek bir Selenium tarayıcısı kullanıyoruz.
+            using var driver = CreateHeadlessDriver();
+            var doc = GetHtmlViaSelenium(driver, url);
 
             result.Books.BookCoverImage_URL = doc.DocumentNode
                 .SelectSingleNode("//div[@class='BookCover__image']//img")?.GetAttributeValue("src", null);
@@ -155,7 +180,7 @@ namespace KitapTanitimSitesi.Services
                     if (!string.IsNullOrEmpty(authorUrl))
                     {
                         fullAuthorUrl = authorUrl.StartsWith("http") ? authorUrl : "https://www.goodreads.com" + authorUrl;
-                        var authorDoc = await GetHtmlAsync(fullAuthorUrl);
+                        var authorDoc = GetHtmlViaSelenium(driver, fullAuthorUrl);
 
                         var imgSrc = authorDoc.DocumentNode
                             .SelectSingleNode("//img[@itemprop='image']")?.GetAttributeValue("src", null);
@@ -220,15 +245,7 @@ namespace KitapTanitimSitesi.Services
         {
             var searchUrl = $"https://www.goodreads.com/search?q={Uri.EscapeDataString(isbn)}";
 
-            var options = new ChromeOptions();
-            options.AddArgument("--headless=new");
-            options.AddArgument("--no-sandbox");
-            options.AddArgument("--disable-gpu");
-            options.AddArgument("--window-size=1280,800");
-            options.AddArgument(
-                "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36");
-
-            using var driver = new ChromeDriver(options);
+            using var driver = CreateHeadlessDriver();
             try
             {
                 driver.Navigate().GoToUrl(searchUrl);
@@ -251,14 +268,69 @@ namespace KitapTanitimSitesi.Services
         }
 
         // ================== YARDIMCI FONKSİYONLAR ==================
+        // Console.WriteLine, IIS Express gibi hosting modellerinde görünmeyebiliyor;
+        // bu yüzden debug çıktısını dosyaya da yazıyoruz. debug_last_fetch.html ile
+        // aynı yere (uygulamanın çalışma dizinine) yazıyoruz.
+        private void DebugLog(string message)
+        {
+            var line = $"[{DateTime.Now:HH:mm:ss}] {message}\n";
+            System.IO.File.AppendAllText("debug_trace.log", line);
+        }
+
         private async Task<HtmlDocument> GetHtmlAsync(string url)
         {
-            var html = await _httpClient.GetStringAsync(url);
-            System.IO.File.WriteAllText("debug_last_fetch.html", html); // geçici debug
-            var doc = new HtmlDocument();
-            doc.LoadHtml(html);
-            return doc;
+            try
+            {
+                var response = await _httpClient.GetAsync(url);
+                var html = await response.Content.ReadAsStringAsync();
 
+                Console.WriteLine($"[DEBUG] URL: {url}");
+                Console.WriteLine($"[DEBUG] Status: {(int)response.StatusCode} {response.StatusCode}");
+                Console.WriteLine($"[DEBUG] Body length: {html.Length}");
+                Console.WriteLine($"[DEBUG] Headers: {response.Headers}");
+
+                System.IO.File.WriteAllText("debug_last_fetch.html", html);
+
+                var doc = new HtmlDocument();
+                doc.LoadHtml(html);
+                return doc;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DEBUG] HATA: {ex.GetType().Name} - {ex.Message}");
+                throw;
+            }
+        }
+
+        // Goodreads bot korumasını (düz HttpClient isteklerine 202/boş içerik döndürüyor)
+        // aşmak için gerçek bir headless Chrome kullanılır.
+        private ChromeDriver CreateHeadlessDriver()
+        {
+            var options = new ChromeOptions();
+            options.AddArgument("--headless=new");
+            options.AddArgument("--no-sandbox");
+            options.AddArgument("--disable-gpu");
+            options.AddArgument("--window-size=1280,800");
+            options.AddArgument(
+                "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36");
+
+            return new ChromeDriver(options);
+        }
+
+        // Verilen driver ile sayfayı açar, body dolana kadar bekler ve HtmlAgilityPack
+        // dokümanına çevirir. Driver çağıran taraf (ScrapeGoodreadsAsync) tarafından
+        // açılıp kapatılır; böylece aynı tarayıcı oturumu kitap + yazar sayfaları için
+        // tekrar tekrar yeniden kullanılır (her sayfa için yeni Chrome açmak yerine).
+        private HtmlDocument GetHtmlViaSelenium(IWebDriver driver, string url)
+        {
+            driver.Navigate().GoToUrl(url);
+
+            var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+            wait.Until(d => d.FindElement(By.TagName("body")).Text.Length > 0);
+
+            var doc = new HtmlDocument();
+            doc.LoadHtml(driver.PageSource);
+            return doc;
         }
 
         private string CleanTextSingleLine(string html)
