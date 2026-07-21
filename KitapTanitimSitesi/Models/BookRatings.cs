@@ -21,10 +21,18 @@ namespace KitapTanitimSitesi.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Navigation properties
+        // ---- YENİ: Soft-delete alanları (Faz Ekstra 2.0) ----
+        public bool IsDeleted { get; set; } = false;
+        public DateTime? DeletedAt { get; set; }
+        public int? DeletedByAdminId { get; set; }
+
+        // Admin'in yorum içinde işaretlediği hakaretli ifade(ler).
+        // Her satıra bir ifade (newline-separated) olarak saklanır.
+        public string? FlaggedText { get; set; }
 
         // Navigation properties
         public Book? Book { get; set; }
         public User? User { get; set; }
+        public User? DeletedByAdmin { get; set; }
     }
 }

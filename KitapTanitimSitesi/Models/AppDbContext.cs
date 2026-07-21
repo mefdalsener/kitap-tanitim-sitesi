@@ -19,6 +19,10 @@ namespace KitapTanitimSitesi.Models
         public DbSet<User> Users { get; set; }
         public DbSet<BookRating> BookRatings { get; set; }
 
+        // ---- YENİ: Faz Ekstra 2.0 ----
+        public DbSet<UserModerationAction> UserModerationActions { get; set; }
+        public DbSet<Report> Reports { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -44,13 +48,73 @@ namespace KitapTanitimSitesi.Models
                 .HasIndex(u => u.Email)
                 .IsUnique();
 
+            // ---- GÜNCELLENDİ (Faz Ekstra 2.0): sadece silinmemiş satırlar arasında
+            // unique — soft-delete edilen bir yorumdan sonra kullanıcı yeniden
+            // yorum+puan girebilsin diye filtered index'e çevrildi. ----
             modelBuilder.Entity<BookRating>()
                 .HasIndex(br => new { br.BookID, br.UserID })
-                .IsUnique();
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
 
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.PublicId)
                 .IsUnique();
+
+            // ---- YENİ (Faz Ekstra 2.0): BookRating soft-delete FK ----
+            // Restrict: silinmiş bir yorumun kaydı hangi admin tarafından
+            // silindiğine dair kanıt olarak kalmalı, o admin User tablosundan
+            // silinemesin.
+            modelBuilder.Entity<BookRating>()
+                .HasOne(br => br.DeletedByAdmin)
+                .WithMany()
+                .HasForeignKey(br => br.DeletedByAdminId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ---- YENİ (Faz Ekstra 2.0): UserModerationAction ilişkileri ----
+            // Tüm User FK'leri Restrict: append-only geçmiş tablosu olduğu için
+            // hiçbir satır, ilişkili bir User silinince kademeli silinmemeli.
+            modelBuilder.Entity<UserModerationAction>()
+                .HasOne(uma => uma.User)
+                .WithMany()
+                .HasForeignKey(uma => uma.UserID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<UserModerationAction>()
+                .HasOne(uma => uma.CreatedByAdmin)
+                .WithMany()
+                .HasForeignKey(uma => uma.CreatedByAdminId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<UserModerationAction>()
+                .HasOne(uma => uma.RelatedRating)
+                .WithMany()
+                .HasForeignKey(uma => uma.RelatedRatingID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<UserModerationAction>()
+                .HasOne(uma => uma.RelatedReport)
+                .WithMany(r => r.ModerationActions)
+                .HasForeignKey(uma => uma.RelatedReportID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ---- YENİ (Faz Ekstra 2.0): Report ilişkileri ----
+            modelBuilder.Entity<Report>()
+                .HasOne(r => r.TargetRating)
+                .WithMany()
+                .HasForeignKey(r => r.TargetRatingID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Report>()
+                .HasOne(r => r.ReporterUser)
+                .WithMany()
+                .HasForeignKey(r => r.ReporterUserID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Report>()
+                .HasOne(r => r.ReviewedByAdmin)
+                .WithMany()
+                .HasForeignKey(r => r.ReviewedByAdminId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
