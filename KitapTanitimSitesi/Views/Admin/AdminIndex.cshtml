@@ -1,5 +1,5 @@
 ﻿@{
-    ViewData["Title"] = "Admin Paneli";
+	ViewData["Title"] = "Admin Paneli";
 }
 
 <!--
@@ -15,170 +15,181 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="utf-8" />
-    <title>@ViewData["Title"]</title>
-    <link rel="stylesheet" href="~/css/admin-panel.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
-    <style>
-            /* ---- Bu stiller sadece landing page'e özgü — admin-panel.css'e
-                                               eklenmedi çünkü diğer sayfalarda hiç kullanılmayacaklar. ---- */
+	<meta charset="utf-8" />
+	<title>@ViewData["Title"]</title>
+	<link rel="stylesheet" href="~/css/admin-panel.css" />
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
+	<style>
+			/* ---- Bu stiller sadece landing page'e özgü — admin-panel.css'e
+																	   eklenmedi çünkü diğer sayfalarda hiç kullanılmayacaklar. ---- */
 
-            .landing-intro {
-                color: rgba(255,255,255,0.55);
-                font-size: 14px;
-                margin: -8px 0 28px 0;
-            }
+			.landing-intro {
+				color: rgba(255,255,255,0.55);
+				font-size: 14px;
+				margin: -8px 0 28px 0;
+			}
 
-            .landing-grid {
-                display: flex;
-                gap: 24px;
-                flex-wrap: wrap;
-                justify-content: center;
-            }
+			.landing-grid {
+				display: flex;
+				gap: 24px;
+				flex-wrap: wrap;
+				justify-content: center;
+			}
 
-            .landing-card {
-                flex: 0 1 260px;
-                display: block;
-                text-decoration: none;
-                border-radius: 14px;
-                padding: 30px 26px;
-                color: white;
-                box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-                transition: transform 0.15s ease, box-shadow 0.15s ease;
-            }
+			.landing-card {
+				flex: 0 1 260px;
+				display: block;
+				text-decoration: none;
+				border-radius: 14px;
+				padding: 30px 26px;
+				color: white;
+				box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+				transition: transform 0.15s ease, box-shadow 0.15s ease;
+			}
 
-                .landing-card:hover {
-                    transform: translateY(-4px);
-                    box-shadow: 0 10px 28px rgba(0,0,0,0.35);
-                }
+				.landing-card:hover {
+					transform: translateY(-4px);
+					box-shadow: 0 10px 28px rgba(0,0,0,0.35);
+				}
 
-                .landing-card:active {
-                    transform: translateY(-1px);
-                }
+				.landing-card:active {
+					transform: translateY(-1px);
+				}
 
-                .landing-card .landing-icon {
-                    font-size: 34px;
-                    display: block;
-                    margin-bottom: 16px;
-                }
+				.landing-card .landing-icon {
+					font-size: 34px;
+					display: block;
+					margin-bottom: 16px;
+				}
 
-                .landing-card h2 {
-                    font-size: 18px;
-                    font-weight: 800;
-                    letter-spacing: 0.3px;
-                    margin-bottom: 10px;
-                    border-bottom: none;
-                    padding-bottom: 0;
-                    text-transform: none;
-                    color: white;
-                }
+				.landing-card h2 {
+					font-size: 18px;
+					font-weight: 800;
+					letter-spacing: 0.3px;
+					margin-bottom: 10px;
+					border-bottom: none;
+					padding-bottom: 0;
+					text-transform: none;
+					color: white;
+				}
 
-                .landing-card p {
-                    font-size: 13.5px;
-                    line-height: 1.55;
-                    color: rgba(255,255,255,0.85);
-                    margin-bottom: 18px;
-                }
+				.landing-card p {
+					font-size: 13.5px;
+					line-height: 1.55;
+					color: rgba(255,255,255,0.85);
+					margin-bottom: 18px;
+				}
 
-                .landing-card .landing-cta {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    font-size: 13px;
-                    font-weight: 700;
-                    background: rgba(255,255,255,0.18);
-                    padding: 8px 16px;
-                    border-radius: 999px;
-                }
+				.landing-card .landing-cta {
+					display: inline-flex;
+					align-items: center;
+					gap: 6px;
+					font-size: 13px;
+					font-weight: 700;
+					background: rgba(255,255,255,0.18);
+					padding: 8px 16px;
+					border-radius: 999px;
+				}
 
-                /* ---- Kartlara özgü canlı gradient renkler ---- */
-                .landing-card.card-green {
-                    background: linear-gradient(135deg, #11998e 0%, #2ecc71 100%);
-                }
+				/* ---- Kartlara özgü canlı gradient renkler ---- */
+				.landing-card.card-green {
+					background: linear-gradient(135deg, #11998e 0%, #2ecc71 100%);
+				}
 
-                .landing-card.card-orange {
-                    background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
-                }
+				.landing-card.card-orange {
+					background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
+				}
 
-                .landing-card.card-blue {
-                    background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
-                }
+				.landing-card.card-blue {
+					background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
+				}
 
-                .landing-card.card-purple {
-                    background: linear-gradient(135deg, #8e2de2 0%, #e056fd 100%);
-                }
+				.landing-card.card-purple {
+					background: linear-gradient(135deg, #8e2de2 0%, #e056fd 100%);
+				}
 
-                .landing-card.card-red {
-                    background: linear-gradient(135deg, #3a0000 0%, #c1121f 100%);
-                }
+				.landing-card.card-red {
+					background: linear-gradient(135deg, #3a0000 0%, #c1121f 100%);
+				}
 
-                .landing-card.card-teal {
-                    background: linear-gradient(135deg, #003b3f 0%, #0d6b6f 100%);
-                }
+				.landing-card.card-teal {
+					background: linear-gradient(135deg, #003b3f 0%, #0d6b6f 100%);
+				}
 
-            @@media (max-width: 720px) {
-                .landing-grid {
-                    flex-direction: column;
-                }
-            }
-    </style>
+				.landing-card.card-amber {
+					background: linear-gradient(135deg, #1a1a3d 0%, #6b4f1f 100%);
+				}
+
+			@@media (max-width: 720px) {
+				.landing-grid {
+					flex-direction: column;
+				}
+			}
+	</style>
 </head>
 <body>
-    <div class="admin-header">
-        Admin Paneli
-        <div class="header-icons">
-            <a href="/Bookland" class="header-icon-link" title="Bookland'e Git"><i class="fa-solid fa-house"></i></a>
-        </div>
-    </div>
+	<div class="admin-header">
+		Admin Paneli
+		<div class="header-icons">
+			<a href="/Bookland" class="header-icon-link" title="Bookland'e Git"><i class="fa-solid fa-house"></i></a>
+		</div>
+	</div>
 
-    <div class="admin-body">
-        <p class="landing-intro">Yapmak istediğiniz işlemi seçin.</p>
+	<div class="admin-body">
+		<p class="landing-intro">Yapmak istediğiniz işlemi seçin.</p>
 
-        <div class="landing-grid">
+		<div class="landing-grid">
 
-            <a class="landing-card card-green" href="/Admin/BookSave">
-                <span class="landing-icon">📕</span>
-                <h2>Kitap Ekle</h2>
-                <p>Linkten otomatik doldurarak ya da ISBN ile kontrol ederek yeni bir kitabı sisteme ekleyin.</p>
-                <span class="landing-cta">Ekleme sayfasına git →</span>
-            </a>
+			<a class="landing-card card-green" href="/Admin/BookSave">
+				<span class="landing-icon">📕</span>
+				<h2>Kitap Ekle</h2>
+				<p>Linkten otomatik doldurarak ya da ISBN ile kontrol ederek yeni bir kitabı sisteme ekleyin.</p>
+				<span class="landing-cta">Ekleme sayfasına git →</span>
+			</a>
 
-            <a class="landing-card card-orange" href="/Admin/BookUpdate">
-                <span class="landing-icon">✏️</span>
-                <h2>Kitap Düzenle</h2>
-                <p>Var olan bir kitabı arayıp seçerek bilgilerini, yazar/çevirmen ve tür bilgilerini güncelleyin.</p>
-                <span class="landing-cta">Düzenleme sayfasına git →</span>
-            </a>
+			<a class="landing-card card-orange" href="/Admin/BookUpdate">
+				<span class="landing-icon">✏️</span>
+				<h2>Kitap Düzenle</h2>
+				<p>Var olan bir kitabı arayıp seçerek bilgilerini, yazar/çevirmen ve tür bilgilerini güncelleyin.</p>
+				<span class="landing-cta">Düzenleme sayfasına git →</span>
+			</a>
 
-            <a class="landing-card card-blue" href="/Admin/AuthorUpdate">
-                <span class="landing-icon">✍️</span>
-                <h2>Yazar Düzenle</h2>
-                <p>Var olan bir yazarı listeden seçip biyografi, doğum/ölüm yılı ve fotoğraf bilgilerini güncelleyin.</p>
-                <span class="landing-cta">Düzenleme sayfasına git →</span>
-            </a>
+			<a class="landing-card card-blue" href="/Admin/AuthorUpdate">
+				<span class="landing-icon">✍️</span>
+				<h2>Yazar Düzenle</h2>
+				<p>Var olan bir yazarı listeden seçip biyografi, doğum/ölüm yılı ve fotoğraf bilgilerini güncelleyin.</p>
+				<span class="landing-cta">Düzenleme sayfasına git →</span>
+			</a>
 
-            <a class="landing-card card-purple" href="/Admin/SeriesEdit">
-                <span class="landing-icon">📚</span>
-                <h2>Kitap Serisi Düzenle</h2>
-                <p>Bir kitap serisi seçip, serideki kitapların sırasını düzenleyin ya da seriye yeni kitap ekleyin.</p>
-                <span class="landing-cta">Düzenleme sayfasına git →</span>
-            </a>
+			<a class="landing-card card-purple" href="/Admin/SeriesEdit">
+				<span class="landing-icon">📚</span>
+				<h2>Kitap Serisi Düzenle</h2>
+				<p>Bir kitap serisi seçip, serideki kitapların sırasını düzenleyin ya da seriye yeni kitap ekleyin.</p>
+				<span class="landing-cta">Düzenleme sayfasına git →</span>
+			</a>
 
-            <a class="landing-card card-teal" href="/Admin/UserManagement">
-                <span class="landing-icon">🚫</span>
-                <h2>Kullanıcı Yönetimi</h2>
-                <p>Cezalı kullanıcıları görüntüleyin, geçmişlerini inceleyin ve uyarı/yasak/ban işlemleri uygulayın.</p>
-                <span class="landing-cta">Yönetim sayfasına git →</span>
-            </a>
+			<a class="landing-card card-teal" href="/Admin/UserManagement">
+				<span class="landing-icon">🚫</span>
+				<h2>Kullanıcı Yönetimi</h2>
+				<p>Cezalı kullanıcıları görüntüleyin, geçmişlerini inceleyin ve uyarı/yasak/ban işlemleri uygulayın.</p>
+				<span class="landing-cta">Yönetim sayfasına git →</span>
+			</a>
 
-            <a class="landing-card card-red" href="/Admin/CommentModeration">
-                <span class="landing-icon">🚩</span>
-                <h2>Yorum Yönetimi</h2>
-                <p>Kullanıcı yorumlarını kitap veya kullanıcıya göre arayın, inceleyin ve kuralları ihlal edenleri kaldırın.</p>
-                <span class="landing-cta">Yönetim sayfasına git →</span>
-            </a>
+			<a class="landing-card card-red" href="/Admin/CommentModeration">
+				<span class="landing-icon">🚩</span>
+				<h2>Yorum Yönetimi</h2>
+				<p>Kullanıcı yorumlarını kitap veya kullanıcıya göre arayın, inceleyin ve kuralları ihlal edenleri kaldırın.</p>
+				<span class="landing-cta">Yönetim sayfasına git →</span>
+			</a>
 
-        </div>
-    </div>
+			<a class="landing-card card-amber" href="/Admin/ReportManagement">
+				<span class="landing-icon">📋</span>
+				<h2>Talep/Şikayet Yönetimi</h2>
+				<p>Kullanıcı taleplerini ve yorum şikayetlerini inceleyin, ilgili panellere yönlendirin, durumlarını güncelleyin.</p>
+				<span class="landing-cta">Yönetim sayfasına git →</span>
+			</a>
+
+		</div>
+	</div>
 </body>
 </html>

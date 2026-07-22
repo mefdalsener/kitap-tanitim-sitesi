@@ -263,3 +263,82 @@ async function yorumSilOnayla() {
 
 // ---- Sayfa açılışında: varsayılan filtrelerle (Tümü) ilk aramayı yap ----
 yorumlariGetir();
+pinliYorumKontrolEt();
+
+// ================================================================
+// YENİ (Faz Ekstra 2.3): Report panelinden derin link desteği.
+// Mevcut arama/silme akışına dokunmaz — ayrı bir "pinli yorum" kartını besler.
+// ================================================================
+
+let pinliRatingId = null;
+
+async function pinliYorumKontrolEt() {
+	const urlParams = new URLSearchParams(window.location.search);
+	const ratingIdRaw = urlParams.get('ratingId');
+	if (!ratingIdRaw) return;
+
+	pinliRatingId = parseInt(ratingIdRaw, 10);
+	if (!pinliRatingId) return;
+
+	await pinliYorumYukle();
+}
+
+async function pinliYorumYukle() {
+	const kart = document.getElementById('pinliYorumKarti');
+	const icerik = document.getElementById('pinliYorumIcerik');
+
+	try {
+		const res = await fetch('/Admin/GetCommentByRatingId?ratingId=' + encodeURIComponent(pinliRatingId));
+		const data = await res.json();
+
+		if (!data.found) {
+			icerik.innerHTML = '<div class="comment-empty-hint">Bu yorum bulunamadı (silinmiş kaydı da olmayabilir).</div>';
+			kart.style.display = 'block';
+			return;
+		}
+
+		icerik.innerHTML = pinliYorumHtmlOlustur(data.comment);
+		kart.style.display = 'block';
+	} catch (err) {
+		showTopNotice('Bağlantı hatası: ' + err.message, true);
+	}
+}
+
+function pinliYorumHtmlOlustur(c) {
+	const coverHtml = c.bookCoverImageUrl
+		? `<img src="${c.bookCoverImageUrl}" alt="Kapak" onerror="this.parentElement.innerHTML='<span class=\\'placeholder\\'>Kapak Yok</span>'" />`
+		: `<span class="placeholder">Kapak Yok</span>`;
+
+	const durumBadge = c.isDeleted ? '<span class="durum-badge silinmis">🗑 Silinmiş</span>' : '';
+
+	let silinmisDetay = '';
+	if (c.isDeleted) {
+		const adminBilgi = c.deletedByAdminUsername ? toTitleCase(c.deletedByAdminUsername) : 'Bilinmiyor';
+		silinmisDetay = `
+			<div class="silinmis-detay">
+				${tarihFormatla(c.deletedAt)} tarihinde <strong>${adminBilgi}</strong> tarafından silindi.
+				${c.flaggedText ? `<div class="flagged-text">İşaretlenen ifade(ler):<br>${escapeHtml(c.flaggedText)}</div>` : ''}
+			</div>`;
+	}
+
+	const silButonu = c.isDeleted
+		? ''
+		: `<button type="button" class="sil-btn" onclick="yorumSilAc(${c.ratingId}, '${escapeForAttr(c.bookName)}', '${escapeForAttr(c.username)}')">🗑 Sil</button>`;
+
+	return `
+		<div class="comment-strip">
+			<div class="comment-strip-cover">${coverHtml}</div>
+			<div class="comment-strip-body">
+				<div class="comment-strip-top">
+					<span class="kitap-adi">${toTitleCase(c.bookName)}</span>
+					<span class="kullanici-bilgi">— ${toTitleCase(c.username)} (#${c.publicId})</span>
+					<span class="yildizlar">${yildizlarOlustur(c.ratingValue)}</span>
+					${durumBadge}
+					<span class="tarih">${tarihFormatla(c.createdAt)}</span>
+				</div>
+				<div class="yorum-metni">${escapeHtml(c.comment) || '<em>(Yorum metni yok, sadece puan)</em>'}</div>
+				${silinmisDetay}
+			</div>
+			<div class="comment-strip-actions">${silButonu}</div>
+		</div>`;
+}

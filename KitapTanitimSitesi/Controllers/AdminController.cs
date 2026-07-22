@@ -787,7 +787,6 @@ namespace KitapTanitimSitesi.Controllers
                 return Json(new { error = ex.Message });
             }
         }
-
         // ==================== FAZ EKSTRA 2.3 — TALEP/ŞİKAYET PANELİ ====================
 
         public IActionResult ReportManagement()
@@ -1330,6 +1329,14 @@ namespace KitapTanitimSitesi.Controllers
                         return Json(new { error = "İlişkilendirilmek istenen yorum bulunamadı." });
                 }
 
+                // ---- YENİ (Faz Ekstra 2.3): RelatedReportId doğrulaması ----
+                if (req.RelatedReportId.HasValue)
+                {
+                    var reportExists = await db.Reports.AnyAsync(r => r.Id == req.RelatedReportId.Value);
+                    if (!reportExists)
+                        return Json(new { error = "İlişkilendirilmek istenen rapor bulunamadı." });
+                }
+
                 var adminIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (!int.TryParse(adminIdClaim, out int adminId))
                     return Json(new { error = "Admin kimliği doğrulanamadı. Lütfen tekrar giriş yapın." });
@@ -1342,6 +1349,7 @@ namespace KitapTanitimSitesi.Controllers
                     ActionType = req.ActionType,
                     Note = string.IsNullOrWhiteSpace(req.Note) ? null : req.Note.Trim(),
                     RelatedRatingID = req.RelatedRatingId,
+                    RelatedReportID = req.RelatedReportId,
                     StartDate = req.StartDate,
                     EndDate = endDate,
                     CreatedAt = DateTime.UtcNow,
@@ -1465,5 +1473,14 @@ namespace KitapTanitimSitesi.Controllers
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public int? RelatedRatingId { get; set; }
+        public int? RelatedReportId { get; set; }   // ---- YENİ (Faz Ekstra 2.3) ----
+    }
+    // ---- YENİ EKLENEN: Rapor durum güncelleme request modeli ----
+    public class UpdateReportStatusRequest
+    {
+        public int ReportId { get; set; }
+        public string Status { get; set; }
+        public string? AdminNote { get; set; }
+        public string? UserMessage { get; set; }
     }
 }
