@@ -3,13 +3,13 @@
 }
 
 <!--
-    AdminIndex.cshtml — Faz 6 (admin-paneli-modülerleştirme.txt)
+    AdminIndex.cshtml — Faz 6 (admin-paneli-modülerleştirme.txt) + Faz Ekstra + Faz Ekstra 2.1
     ------------------------------------------------------------
     Eski dev state-machine'li sürüm tamamen kaldırıldı. Bu sayfa artık sadece
-    3 renkli karttan oluşan bir landing page: her kart kendi bağımsız sayfasına
+    renkli kartlardan oluşan bir landing page: her kart kendi bağımsız sayfasına
     yönlendirir. bookId/authorId ile ilgili hiçbir state, hiçbir script burada
     tutulmuyor — onlar artık ilgili sayfaların kendi JS dosyalarında (bookSave.js,
-    bookUpdate.js, authorUpdate.js).
+    bookUpdate.js, authorUpdate.js, seriesEdit.js, commentModeration.js).
 -->
 
 <!DOCTYPE html>
@@ -21,8 +21,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
     <style>
             /* ---- Bu stiller sadece landing page'e özgü — admin-panel.css'e
-                                   eklenmedi çünkü diğer 3 sayfada (BookSave/BookUpdate/AuthorUpdate)
-                                   hiç kullanılmayacaklar. ---- */
+                                               eklenmedi çünkü diğer sayfalarda hiç kullanılmayacaklar. ---- */
 
             .landing-intro {
                 color: rgba(255,255,255,0.55);
@@ -109,6 +108,10 @@
                     background: linear-gradient(135deg, #8e2de2 0%, #e056fd 100%);
                 }
 
+                .landing-card.card-red {
+                    background: linear-gradient(135deg, #3a0000 0%, #c1121f 100%);
+                }
+
             @@media (max-width: 720px) {
                 .landing-grid {
                     flex-direction: column;
@@ -155,6 +158,13 @@
                 <h2>Kitap Serisi Düzenle</h2>
                 <p>Bir kitap serisi seçip, serideki kitapların sırasını düzenleyin ya da seriye yeni kitap ekleyin.</p>
                 <span class="landing-cta">Düzenleme sayfasına git →</span>
+            </a>
+
+            <a class="landing-card card-red" href="/Admin/CommentModeration">
+                <span class="landing-icon">🚩</span>
+                <h2>Yorum Yönetimi</h2>
+                <p>Kullanıcı yorumlarını kitap veya kullanıcıya göre arayın, inceleyin ve kuralları ihlal edenleri kaldırın.</p>
+                <span class="landing-cta">Yönetim sayfasına git →</span>
             </a>
 
         </div>

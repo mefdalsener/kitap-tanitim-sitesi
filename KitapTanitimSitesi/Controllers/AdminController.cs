@@ -4,6 +4,7 @@ using KitapTanitimSitesi.Services;
 using Microsoft.EntityFrameworkCore;
 using KitapTanitimSitesi.Models;
 using KitapTanitimSitesi.Models.ViewModels;
+using System.Security.Claims;
 
 namespace KitapTanitimSitesi.Controllers
 {
@@ -786,6 +787,169 @@ namespace KitapTanitimSitesi.Controllers
                 return Json(new { error = ex.Message });
             }
         }
+        public IActionResult CommentModeration()
+        {
+            return View();
+        }
+
+        // ---- YENİ: Yorum arama + sayfalama.
+        // Kitap adı VE kullanıcı adı/ID birlikte gönderilirse AND ile birleştirilir.
+        // Türkçe kurallarına göre case-insensitive ("I" = "İ" = "i" = "ı") ve
+        // boşluk-toleranslı "içerir" araması için SQL Server'ın Turkish_CI_AS
+        // collation'ı kullanılıyor — .NET'in ToLower()/ToUpper()'ı sunucu kültürüne
+        // göre davranış değiştirebildiğinden (klasik "Turkish I" sorunu) LINQ→SQL
+        // çevirisinde güvenilir değil; COLLATE ise veritabanı seviyesinde çalışıp
+        // indexlenebilir bir SQL operatörü olduğundan tercih edildi. ----
+        [HttpGet]
+        public async Task<IActionResult> SearchComments(
+            [FromServices] AppDbContext db,
+            string? bookName,
+            string? username,
+            string? publicId,
+            string status = "all",
+            int page = 1)
+        {
+            try
+            {
+                if (page < 1) page = 1;
+                const int pageSize = 20;
+
+                var query = db.BookRatings
+                    .Include(r => r.Book)
+                    .Include(r => r.User)
+                    .Include(r => r.DeletedByAdmin)
+                    .AsQueryable();
+
+                // ---- Durum filtresi ----
+                if (status == "active")
+                    query = query.Where(r => !r.IsDeleted);
+                else if (status == "deleted")
+                    query = query.Where(r => r.IsDeleted);
+                // status == "all" -> filtre uygulanmaz
+
+                // ---- Kitap adı: Türkçe-duyarlı, boşluk-normalize edilmiş "içerir" araması ----
+                var normalizedBookName = NormalizeSearchTerm(bookName);
+                if (!string.IsNullOrEmpty(normalizedBookName))
+                {
+                    var pattern = $"%{EscapeLikeTerm(normalizedBookName)}%";
+                    query = query.Where(r =>
+                        EF.Functions.Like(EF.Functions.Collate(r.Book.BookName, "Turkish_CI_AS"), pattern));
+                }
+
+                // ---- Kullanıcı adı: aynı yöntemle ----
+                var normalizedUsername = NormalizeSearchTerm(username);
+                if (!string.IsNullOrEmpty(normalizedUsername))
+                {
+                    var pattern = $"%{EscapeLikeTerm(normalizedUsername)}%";
+                    query = query.Where(r =>
+                        EF.Functions.Like(EF.Functions.Collate(r.User.Username, "Turkish_CI_AS"), pattern));
+                }
+
+                // ---- Kullanıcı kimliği: PublicId üzerinden tam eşleşme (internal UserID
+                // admine gösterilmiyor/aratılmıyor — Bookland tarafında kullanıcıya
+                // gösterilen kimlik zaten PublicId olduğundan tutarlılık için) ----
+                var normalizedPublicId = NormalizeSearchTerm(publicId);
+                if (!string.IsNullOrEmpty(normalizedPublicId))
+                {
+                    query = query.Where(r => r.User.PublicId == normalizedPublicId);
+                }
+
+                var totalCount = await query.CountAsync();
+                var totalPages = totalCount == 0 ? 1 : (int)Math.Ceiling(totalCount / (double)pageSize);
+                if (page > totalPages) page = totalPages;
+
+                var items = await query
+                    .OrderByDescending(r => r.RatingID)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(r => new
+                    {
+                        ratingId = r.RatingID,
+                        bookId = r.BookID,
+                        bookName = r.Book.BookName,
+                        bookCoverImageUrl = r.Book.BookCoverImage_URL,
+                        userId = r.UserID,
+                        publicId = r.User.PublicId,
+                        username = r.User.Username,
+                        ratingValue = r.RatingValue,
+                        comment = r.Comment,
+                        createdAt = r.CreatedAt,
+                        isDeleted = r.IsDeleted,
+                        deletedAt = r.DeletedAt,
+                        deletedByAdminUsername = r.DeletedByAdmin != null ? r.DeletedByAdmin.Username : null,
+                        flaggedText = r.FlaggedText
+                    })
+                    .ToListAsync();
+
+                return Json(new { comments = items, totalCount, totalPages, page, pageSize });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        // ---- YENİ: Bir yorumu tam soft-delete eder.
+        // DeletedByAdminId, giriş yapmış adminin ClaimTypes.NameIdentifier claim'inden
+        // (AccountController.Login'de user.Id olarak set ediliyor) okunur.
+        // Kullanıcıya gösterilecek sabit mesaj burada döndürülür ama DB'ye AYRI bir
+        // alan olarak KAYDEDİLMEZ — Bookland tarafında (Faz 2.4) nasıl gösterileceğine
+        // karar verilecek. ----
+        [HttpPost]
+        public async Task<IActionResult> DeleteComment([FromBody] DeleteCommentRequest req, [FromServices] AppDbContext db)
+        {
+            try
+            {
+                if (req == null || req.RatingId <= 0)
+                    return Json(new { error = "Geçersiz istek." });
+
+                var rating = await db.BookRatings.FindAsync(req.RatingId);
+                if (rating == null)
+                    return Json(new { error = "Yorum bulunamadı." });
+
+                if (rating.IsDeleted)
+                    return Json(new { error = "Bu yorum zaten silinmiş." });
+
+                var adminIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!int.TryParse(adminIdClaim, out int adminId))
+                    return Json(new { error = "Admin kimliği doğrulanamadı. Lütfen tekrar giriş yapın." });
+
+                rating.IsDeleted = true;
+                rating.DeletedAt = DateTime.UtcNow;
+                rating.DeletedByAdminId = adminId;
+                rating.FlaggedText = string.IsNullOrWhiteSpace(req.FlaggedText) ? null : req.FlaggedText.Trim();
+
+                await db.SaveChangesAsync();
+
+                return Json(new
+                {
+                    success = true,
+                    ratingId = rating.RatingID,
+                    systemMessage = "Yorumunuz topluluk kurallarına uymadığı için silinmiştir."
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        // ---- YENİ: Arama teriminin baştaki/sondaki boşluklarını kırpar, arada
+        // birden fazla boşluk varsa teke indirir — kullanıcı "  kürk   mantolu  "
+        // yazsa da "kürk mantolu" aransın diye. ----
+        private static string NormalizeSearchTerm(string? term)
+        {
+            if (string.IsNullOrWhiteSpace(term)) return string.Empty;
+            return System.Text.RegularExpressions.Regex.Replace(term.Trim(), @"\s+", " ");
+        }
+
+        // ---- YENİ: LIKE'a özel karakterleri ( % _ [ ) kaçışlar — kullanıcı arama
+        // kutusuna bu karakterleri yazarsa SQL LIKE deseni bozulmasın diye. ----
+        private static string EscapeLikeTerm(string term)
+        {
+            return term.Replace("[", "[[]").Replace("%", "[%]").Replace("_", "[_]");
+        }
+
     }
 
     // ---- YENİ EKLENEN REQUEST MODELİ ----
@@ -849,5 +1013,10 @@ namespace KitapTanitimSitesi.Controllers
     public class DeleteSeriesRequest
     {
         public int SeriesId { get; set; }
+    }
+    public class DeleteCommentRequest
+    {
+        public int RatingId { get; set; }
+        public string? FlaggedText { get; set; }
     }
 }
