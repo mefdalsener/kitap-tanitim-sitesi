@@ -25,7 +25,6 @@ namespace KitapTanitimSitesi.Controllers
         }
 
         // POST: /Account/Register
-        // POST: /Account/Register
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(SignupIndex model)
@@ -39,10 +38,17 @@ namespace KitapTanitimSitesi.Controllers
 
             if (existingUser != null)
             {
+                if (existingUser.Email == model.Email)
+                {
+                    // ---- YENİ (Faz Ekstra 2.2): E-posta zaten kayıtlı VE o hesap
+                    // TamBan'lıysa, jenerik "zaten kayıtlı" yerine özel mesaj göster. ----
+                    var (isBanned, _) = await GetTamBanDurumuAsync(existingUser.Id);
+                    ModelState.AddModelError(nameof(model.Email), isBanned
+                        ? "Kullanım şartlarının ihlali nedeniyle bu e-posta adresi kullanım dışı bırakılmıştır."
+                        : "Bu e-posta zaten kayıtlı.");
+                }
                 if (existingUser.Username == model.Username)
                     ModelState.AddModelError(nameof(model.Username), "Bu kullanıcı adı zaten kayıtlı.");
-                if (existingUser.Email == model.Email)
-                    ModelState.AddModelError(nameof(model.Email), "Bu e-posta zaten kayıtlı.");
 
                 return View(model);
             }
@@ -137,6 +143,17 @@ namespace KitapTanitimSitesi.Controllers
                 return View(model);
             }
 
+            // ---- YENİ (Faz Ekstra 2.2): TamBan'lı kullanıcının girişini engelle ----
+            var (isBanned, effectiveEndDate) = await GetTamBanDurumuAsync(user.Id);
+            if (isBanned)
+            {
+                var mesaj = !effectiveEndDate.HasValue
+                    ? "Hesabınız topluluk kurallarını ihlal ettiği için kalıcı olarak yasaklanmıştır."
+                    : $"Hesabınız {effectiveEndDate.Value:dd.MM.yyyy HH:mm} tarihine kadar yasaklanmıştır.";
+                ModelState.AddModelError("", mesaj);
+                return View(model);
+            }
+
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -165,6 +182,34 @@ namespace KitapTanitimSitesi.Controllers
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Index", "Bookland");
+        }
+
+        // ---- YENİ (Faz Ekstra 2.2): Bir kullanıcının "gerçekten TamBan'lı mı"
+        // durumunu hesaplar. AdminController.cs'teki aynı isimli metotla kasıtlı
+        // olarak aynı mantığı taşır — izolasyon prensibi gereği paylaşılan bir
+        // servise çıkarılmadı. ----
+        private async Task<(bool isBanned, DateTime? effectiveEndDate)> GetTamBanDurumuAsync(int userId)
+        {
+            var baseAction = await _context.UserModerationActions
+                .Where(a => a.UserID == userId &&
+                    (a.ActionType == "TamBan" || a.ActionType == "YorumYasağı" || a.ActionType == "YasakKaldırma"))
+                .OrderByDescending(a => a.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (baseAction == null || baseAction.ActionType != "TamBan")
+                return (false, null);
+
+            var laterAdjustment = await _context.UserModerationActions
+                .Where(a => a.UserID == userId
+                    && a.CreatedAt > baseAction.CreatedAt
+                    && (a.ActionType == "YasakUzatma" || a.ActionType == "YasakKısaltma"))
+                .OrderByDescending(a => a.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            var effectiveEndDate = laterAdjustment?.EndDate ?? baseAction.EndDate;
+            var isActive = !effectiveEndDate.HasValue || effectiveEndDate.Value > DateTime.UtcNow;
+
+            return (isActive, effectiveEndDate);
         }
     }
 }

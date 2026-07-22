@@ -112,6 +112,10 @@
                     background: linear-gradient(135deg, #3a0000 0%, #c1121f 100%);
                 }
 
+                .landing-card.card-teal {
+                    background: linear-gradient(135deg, #003b3f 0%, #0d6b6f 100%);
+                }
+
             @@media (max-width: 720px) {
                 .landing-grid {
                     flex-direction: column;
@@ -158,6 +162,13 @@
                 <h2>Kitap Serisi Düzenle</h2>
                 <p>Bir kitap serisi seçip, serideki kitapların sırasını düzenleyin ya da seriye yeni kitap ekleyin.</p>
                 <span class="landing-cta">Düzenleme sayfasına git →</span>
+            </a>
+
+            <a class="landing-card card-teal" href="/Admin/UserManagement">
+                <span class="landing-icon">🚫</span>
+                <h2>Kullanıcı Yönetimi</h2>
+                <p>Cezalı kullanıcıları görüntüleyin, geçmişlerini inceleyin ve uyarı/yasak/ban işlemleri uygulayın.</p>
+                <span class="landing-cta">Yönetim sayfasına git →</span>
             </a>
 
             <a class="landing-card card-red" href="/Admin/CommentModeration">

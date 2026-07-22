@@ -1,0 +1,562 @@
+﻿@{
+    ViewData["Title"] = "Kullanıcı Yönetimi";
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/css/admin-panel.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
+    <!--
+        Aşağıdaki stiller SADECE bu sayfaya özgü (kullanıcı şeridi, geçmiş
+        zaman çizelgesi, ceza ekleme popup'ı). admin-panel.css'e eklenmedi —
+        SeriesEdit/CommentModeration'daki aynı gerekçe.
+    -->
+    <style>
+            /* ---- SAYFA TEMASI — Kullanıcı Yönetimi (petrol/koyu turkuaz).
+                                                                       Diğer panellerden (yeşil/turuncu/mavi/mor/bordo) ayrışsın diye. ---- */
+            .admin-header {
+                background: linear-gradient(135deg, #003b3f 0%, #0d6b6f 100%);
+                box-shadow: 0 2px 12px rgba(0,59,63,0.35);
+            }
+
+            .card,
+            .popup-box {
+                background: linear-gradient(135deg, #003b3f 0%, #0d6b6f 100%);
+            }
+
+            .header-icon-link {
+                color: #0d6b6f;
+            }
+
+            /* ---- ARAMA FORMU ---- */
+            .search-row {
+                display: flex;
+                gap: 14px;
+                align-items: flex-end;
+                flex-wrap: wrap;
+            }
+
+                .search-row .form-group {
+                    flex: 1;
+                    min-width: 160px;
+                    margin-bottom: 0;
+                }
+
+                .search-row .ara-btn-group {
+                    flex: 0 0 auto;
+                }
+
+            .sonuc-ozet {
+                color: rgba(255,255,255,0.6);
+                font-size: 13px;
+                margin-bottom: 14px;
+            }
+
+            /* ---- KULLANICI ŞERİDİ ---- */
+            .user-strip {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                background: rgba(255,255,255,0.06);
+                border: 1px solid rgba(255,255,255,0.15);
+                border-radius: 10px;
+                padding: 14px 16px;
+                margin-bottom: 10px;
+                cursor: pointer;
+                transition: background 0.15s;
+            }
+
+                .user-strip:hover {
+                    background: rgba(255,255,255,0.11);
+                }
+
+            .user-strip-info {
+                flex: 1;
+                min-width: 0;
+            }
+
+                .user-strip-info .kullanici-adi {
+                    color: white;
+                    font-weight: 700;
+                    font-size: 15px;
+                }
+
+                .user-strip-info .kullanici-alt {
+                    color: rgba(255,255,255,0.6);
+                    font-size: 12.5px;
+                    margin-top: 2px;
+                }
+
+            .user-strip .durum-badge {
+                display: inline-block;
+                font-size: 11px;
+                font-weight: 700;
+                padding: 4px 12px;
+                border-radius: 999px;
+                letter-spacing: 0.3px;
+                white-space: nowrap;
+            }
+
+                .user-strip .durum-badge.tamban {
+                    background: rgba(211,47,47,0.25);
+                    color: #ff8a80;
+                    border: 1px solid rgba(211,47,47,0.5);
+                }
+
+                .user-strip .durum-badge.kismi {
+                    background: rgba(255,167,38,0.2);
+                    color: #ffcc80;
+                    border: 1px solid rgba(255,167,38,0.5);
+                }
+
+                .user-strip .durum-badge.gecmis {
+                    background: rgba(255,255,255,0.08);
+                    color: rgba(255,255,255,0.5);
+                    border: 1px solid rgba(255,255,255,0.2);
+                }
+
+            .comment-empty-hint {
+                color: rgba(255,255,255,0.5);
+                font-size: 13px;
+                padding: 20px 2px;
+                text-align: center;
+            }
+
+            .sayfalama-row {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 16px;
+                margin-top: 18px;
+            }
+
+            .sayfalama-bilgi {
+                color: rgba(255,255,255,0.65);
+                font-size: 13px;
+                min-width: 90px;
+                text-align: center;
+            }
+
+            .secondary-btn {
+                padding: 10px 18px;
+                background: rgba(255,255,255,0.1);
+                color: white;
+                border: 1px solid rgba(255,255,255,0.25);
+                border-radius: 8px;
+                font-size: 13.5px;
+                font-weight: bold;
+                cursor: pointer;
+                white-space: nowrap;
+            }
+
+                .secondary-btn:hover:not(:disabled) {
+                    background: rgba(255,255,255,0.18);
+                }
+
+                .secondary-btn:disabled {
+                    background: rgba(255,255,255,0.04);
+                    color: rgba(255,255,255,0.3);
+                    border-color: rgba(255,255,255,0.08);
+                    cursor: not-allowed;
+                }
+
+            .geri-btn {
+                background: none;
+                border: none;
+                color: rgba(255,255,255,0.7);
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+                margin-bottom: 16px;
+                padding: 0;
+            }
+
+                .geri-btn:hover {
+                    color: white;
+                }
+
+            /* ---- KULLANICI DETAY BAŞLIĞI ---- */
+            .detay-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 12px;
+                margin-bottom: 6px;
+            }
+
+                .detay-header h2 {
+                    border-bottom: none;
+                    margin-bottom: 0;
+                    padding-bottom: 0;
+                }
+
+            .detay-alt-bilgi {
+                color: rgba(255,255,255,0.55);
+                font-size: 13px;
+                margin-bottom: 18px;
+            }
+
+            .yeni-eylem-btn {
+                padding: 10px 20px;
+                background: #0d6b6f;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 13.5px;
+                font-weight: bold;
+                cursor: pointer;
+                white-space: nowrap;
+            }
+
+                .yeni-eylem-btn:hover {
+                    background: #0a5457;
+                }
+
+            /* ---- ZAMAN ÇİZELGESİ (moderasyon geçmişi) ---- */
+            .timeline-item {
+                display: flex;
+                gap: 14px;
+                padding: 14px 4px;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+
+                .timeline-item:last-child {
+                    border-bottom: none;
+                }
+
+            .timeline-marker {
+                flex-shrink: 0;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                margin-top: 6px;
+                background: rgba(255,255,255,0.3);
+            }
+
+                .timeline-marker.tip-TamBan {
+                    background: #d32f2f;
+                }
+
+                .timeline-marker.tip-YorumYasağı {
+                    background: #ffa726;
+                }
+
+                .timeline-marker.tip-Uyarı {
+                    background: #ffd54f;
+                }
+
+                .timeline-marker.tip-YasakKaldırma {
+                    background: #66bb6a;
+                }
+
+                .timeline-marker.tip-YasakUzatma {
+                    background: #ef5350;
+                }
+
+                .timeline-marker.tip-YasakKısaltma {
+                    background: #4dd0e1;
+                }
+
+            .timeline-body {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .timeline-top-row {
+                display: flex;
+                align-items: baseline;
+                gap: 10px;
+                flex-wrap: wrap;
+                margin-bottom: 4px;
+            }
+
+            .timeline-tip {
+                color: white;
+                font-weight: 700;
+                font-size: 14px;
+            }
+
+            .timeline-tarih {
+                color: rgba(255,255,255,0.45);
+                font-size: 11.5px;
+            }
+
+            .timeline-admin {
+                color: rgba(255,255,255,0.5);
+                font-size: 12px;
+            }
+
+            .timeline-sure {
+                color: rgba(255,255,255,0.65);
+                font-size: 12.5px;
+                margin-bottom: 4px;
+            }
+
+            .timeline-not {
+                color: rgba(255,255,255,0.8);
+                font-size: 13px;
+                line-height: 1.5;
+                background: rgba(255,255,255,0.05);
+                border-radius: 6px;
+                padding: 8px 10px;
+                margin-top: 6px;
+                white-space: pre-wrap;
+            }
+
+            /* ---- İLİŞKİLİ YORUM KUTUSU ---- */
+            .related-comment-box {
+                margin-top: 8px;
+                background: rgba(0,0,0,0.2);
+                border-radius: 6px;
+                padding: 10px 12px;
+                font-size: 12.5px;
+            }
+
+                .related-comment-box .rc-kitap {
+                    color: rgba(255,255,255,0.6);
+                    font-weight: 700;
+                    margin-bottom: 4px;
+                }
+
+                .related-comment-box .rc-metin {
+                    color: rgba(255,255,255,0.85);
+                    line-height: 1.5;
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                }
+
+                    .related-comment-box .rc-metin mark {
+                        background: rgba(255,138,128,0.35);
+                        color: #ffab91;
+                        border-radius: 3px;
+                        padding: 0 2px;
+                    }
+
+                .related-comment-box .rc-silinmis-etiket {
+                    display: inline-block;
+                    margin-top: 6px;
+                    font-size: 11px;
+                    color: #ff8a80;
+                    font-weight: 700;
+                }
+
+            /* ---- POPUP: Yeni Eylem Ekle ---- */
+            .popup-box.popup-wide {
+                width: 420px;
+            }
+
+            .radio-pill-group {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-bottom: 14px;
+            }
+
+            .radio-pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 8px 14px;
+                border-radius: 999px;
+                border: 1px solid rgba(255,255,255,0.25);
+                background: rgba(255,255,255,0.06);
+                color: rgba(255,255,255,0.8);
+                font-size: 12.5px;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                user-select: none;
+            }
+
+                .radio-pill:hover {
+                    border-color: rgba(255,255,255,0.5);
+                    background: rgba(255,255,255,0.12);
+                    color: white;
+                }
+
+                .radio-pill.selected {
+                    background: #0d6b6f;
+                    border-color: #0d6b6f;
+                    color: white;
+                    font-weight: 600;
+                }
+
+            .sure-secim-row {
+                display: none;
+                gap: 10px;
+                margin-bottom: 14px;
+            }
+
+                .sure-secim-row.gorunur {
+                    display: flex;
+                }
+
+                .sure-secim-row .form-group {
+                    flex: 1;
+                    margin-bottom: 0;
+                }
+
+            .suresiz-check-row {
+                display: none;
+                align-items: center;
+                gap: 8px;
+                margin: -6px 0 14px 0;
+                font-size: 12.5px;
+                color: rgba(255,255,255,0.75);
+            }
+
+                .suresiz-check-row.gorunur {
+                    display: flex;
+                }
+
+            .ilgili-yorum-hint {
+                font-size: 11.5px;
+                color: rgba(255,255,255,0.45);
+                margin: -8px 0 14px 0;
+                line-height: 1.5;
+            }
+
+            .btn-danger {
+                background: #d32f2f !important;
+            }
+
+                .btn-danger:hover {
+                    background: #b71c1c !important;
+                }
+
+            @@media (max-width: 720px) {
+                .search-row {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+
+                .user-strip {
+                    flex-wrap: wrap;
+                }
+            }
+    </style>
+</head>
+<body>
+    <div class="admin-header">
+        Admin Paneli — Kullanıcı Yönetimi
+        <div class="header-icons">
+            <a href="/Admin" class="header-icon-link" title="Admin Paneline Dön"><i class="fa-solid fa-user-pen"></i></a>
+            <a href="/Bookland" class="header-icon-link" title="Bookland'e Git"><i class="fa-solid fa-house"></i></a>
+        </div>
+    </div>
+
+    <div class="admin-body">
+
+        <!-- LİSTE GÖRÜNÜMÜ -->
+        <div id="listeGorunumu">
+
+            <!-- ARAMA -->
+            <div class="card">
+                <h2>🔎 Kullanıcı Ara</h2>
+                <div class="search-row">
+                    <div class="form-group">
+                        <label>Kullanıcı Adı</label>
+                        <input type="text" id="aramaKullaniciAdi" placeholder="Kullanıcı adı..." />
+                    </div>
+                    <div class="form-group" style="max-width:180px;">
+                        <label>Kullanıcı Kimliği</label>
+                        <input type="text" id="aramaKullaniciPublicId" placeholder="Örn: 260000123" maxlength="9" />
+                    </div>
+                    <div class="form-group ara-btn-group">
+                        <button type="button" class="getir-btn" id="araBtn" onclick="ara()">
+                            <span class="btn-label">🔎 Ara</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SONUÇLAR -->
+            <div class="card">
+                <h2>🚫 Cezalı Kullanıcılar</h2>
+                <div class="sonuc-ozet" id="sonucOzet"></div>
+                <div id="kullaniciListesi"></div>
+
+                <div class="sayfalama-row">
+                    <button type="button" class="secondary-btn" id="oncekiBtn" onclick="sayfaDegistir(-1)">‹ Önceki</button>
+                    <span class="sayfalama-bilgi" id="sayfaBilgisi">Sayfa 1 / 1</span>
+                    <button type="button" class="secondary-btn" id="sonrakiBtn" onclick="sayfaDegistir(1)">Sonraki ›</button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- DETAY GÖRÜNÜMÜ -->
+        <div id="detayGorunumu" style="display:none;">
+
+            <button type="button" class="geri-btn" onclick="listeyeDon()">‹ Listeye Dön</button>
+
+            <div class="card">
+                <div class="detay-header">
+                    <h2 id="detayKullaniciAdi">👤 Kullanıcı</h2>
+                    <button type="button" class="yeni-eylem-btn" onclick="yeniEylemPopuAc()">➕ Yeni Eylem Ekle</button>
+                </div>
+                <div class="detay-alt-bilgi" id="detayAltBilgi"></div>
+                <div id="gecmisZamanCizelgesi"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- POPUP: Yeni Eylem Ekle -->
+    <div class="popup-overlay" id="popupYeniEylem">
+        <div class="popup-box popup-wide">
+            <h3>Yeni Eylem Ekle</h3>
+
+            <div class="form-group">
+                <label>Eylem Tipi</label>
+                <div class="radio-pill-group" id="eylemTipiGrubu">
+                    <div class="radio-pill" data-tip="Uyarı" onclick="eylemTipiSec('Uyarı')">⚠ Uyarı</div>
+                    <div class="radio-pill" data-tip="YorumYasağı" onclick="eylemTipiSec('YorumYasağı')">🚫 Yorum Yasağı</div>
+                    <div class="radio-pill" data-tip="TamBan" onclick="eylemTipiSec('TamBan')">⛔ Tam Ban</div>
+                    <div class="radio-pill" data-tip="YasakKaldırma" onclick="eylemTipiSec('YasakKaldırma')">✔ Yasak Kaldır</div>
+                    <div class="radio-pill" data-tip="YasakUzatma" onclick="eylemTipiSec('YasakUzatma')">⏩ Yasak Uzat</div>
+                    <div class="radio-pill" data-tip="YasakKısaltma" onclick="eylemTipiSec('YasakKısaltma')">⏪ Yasak Kısalt</div>
+                </div>
+            </div>
+
+            <div class="suresiz-check-row" id="suresizCheckRow">
+                <input type="checkbox" id="suresizCheck" onchange="suresizToggle()" />
+                <label for="suresizCheck">Süresiz (bitiş tarihi yok)</label>
+            </div>
+
+            <div class="sure-secim-row" id="sureSecimRow">
+                <div class="form-group">
+                    <label>Başlangıç Tarihi</label>
+                    <input type="datetime-local" id="eylemBaslangic" />
+                </div>
+                <div class="form-group">
+                    <label>Bitiş Tarihi</label>
+                    <input type="datetime-local" id="eylemBitis" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>İç Not (sadece adminler görür)</label>
+                <textarea id="eylemNot" placeholder="Opsiyonel açıklama..." style="width:100%; min-height:70px; padding:11px 14px; border:1px solid rgba(255,255,255,0.2); border-radius:8px; background:rgba(255,255,255,0.08); color:white; font-family:Arial, sans-serif; font-size:13.5px; resize:vertical;"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>İlişkili Yorum ID (opsiyonel)</label>
+                <input type="number" id="eylemRatingId" placeholder="Örn: 42" />
+                <p class="ilgili-yorum-hint">Bu eylem belirli bir yorumdan kaynaklanıyorsa, o yorumun ID'sini girin (Yorum Yönetimi sayfasındaki listeden bulunabilir). Boş bırakabilirsiniz.</p>
+            </div>
+
+            <div class="popup-buttons">
+                <button class="btn-cancel" onclick="popupKapat('yeniEylem')">İptal</button>
+                <button class="btn-confirm" onclick="eylemKaydet()">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/js/admin/userManagement.js"></script>
+</body>
+</html>

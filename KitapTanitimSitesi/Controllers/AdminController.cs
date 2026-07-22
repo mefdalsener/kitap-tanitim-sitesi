@@ -787,6 +787,212 @@ namespace KitapTanitimSitesi.Controllers
                 return Json(new { error = ex.Message });
             }
         }
+
+        // ==================== FAZ EKSTRA 2.3 — TALEP/ŞİKAYET PANELİ ====================
+
+        public IActionResult ReportManagement()
+        {
+            return View();
+        }
+
+        // ---- YENİ: Talep/Şikayet listesi — Tip ve Durum filtresi + sayfalama.
+        // Şikayet tipindeki satırlarda TargetRatingID üzerinden BookRating'e
+        // join yapılıp kitap/kullanıcı/yorum özeti de birlikte dönüyor. ----
+        [HttpGet]
+        public async Task<IActionResult> GetReports(
+            [FromServices] AppDbContext db,
+            string type = "all",
+            string status = "all",
+            int page = 1)
+        {
+            try
+            {
+                if (page < 1) page = 1;
+                const int pageSize = 20;
+
+                var query = db.Reports
+                    .Include(r => r.ReporterUser)
+                    .Include(r => r.TargetRating).ThenInclude(tr => tr.Book)
+                    .Include(r => r.TargetRating).ThenInclude(tr => tr.User)
+                    .AsQueryable();
+
+                if (type == "Şikayet" || type == "Talep")
+                    query = query.Where(r => r.Type == type);
+
+                if (status != "all")
+                    query = query.Where(r => r.Status == status);
+
+                var totalCount = await query.CountAsync();
+                var totalPages = totalCount == 0 ? 1 : (int)Math.Ceiling(totalCount / (double)pageSize);
+                if (page > totalPages) page = totalPages;
+
+                var items = await query
+                    .OrderByDescending(r => r.CreatedAt)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(r => new
+                    {
+                        id = r.Id,
+                        type = r.Type,
+                        status = r.Status,
+                        message = r.Message,
+                        createdAt = r.CreatedAt,
+                        reporterUsername = r.ReporterUser.Username,
+                        reporterPublicId = r.ReporterUser.PublicId,
+                        targetRating = r.TargetRating == null ? null : new
+                        {
+                            ratingId = r.TargetRating.RatingID,
+                            bookName = r.TargetRating.Book.BookName,
+                            username = r.TargetRating.User.Username,
+                            comment = r.TargetRating.Comment,
+                            ratingValue = r.TargetRating.RatingValue
+                        }
+                    })
+                    .ToListAsync();
+
+                return Json(new { reports = items, totalCount, totalPages, page, pageSize });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        // ---- YENİ: Tek bir raporun tüm detayını döner (detay görünümü için) ----
+        [HttpGet]
+        public async Task<IActionResult> GetReportById(int reportId, [FromServices] AppDbContext db)
+        {
+            try
+            {
+                var r = await db.Reports
+                    .Include(x => x.ReporterUser)
+                    .Include(x => x.ReviewedByAdmin)
+                    .Include(x => x.TargetRating).ThenInclude(tr => tr.Book)
+                    .Include(x => x.TargetRating).ThenInclude(tr => tr.User)
+                    .FirstOrDefaultAsync(x => x.Id == reportId);
+
+                if (r == null)
+                    return Json(new { found = false });
+
+                return Json(new
+                {
+                    found = true,
+                    report = new
+                    {
+                        id = r.Id,
+                        type = r.Type,
+                        status = r.Status,
+                        message = r.Message,
+                        adminNote = r.AdminNote,
+                        userMessage = r.UserMessage,
+                        createdAt = r.CreatedAt,
+                        reviewedAt = r.ReviewedAt,
+                        reviewedByAdminUsername = r.ReviewedByAdmin != null ? r.ReviewedByAdmin.Username : null,
+                        reporterUsername = r.ReporterUser != null ? r.ReporterUser.Username : null,
+                        reporterPublicId = r.ReporterUser != null ? r.ReporterUser.PublicId : null,
+                        targetRating = r.TargetRating == null ? null : new
+                        {
+                            ratingId = r.TargetRating.RatingID,
+                            bookName = r.TargetRating.Book != null ? r.TargetRating.Book.BookName : null,
+                            username = r.TargetRating.User != null ? r.TargetRating.User.Username : null,
+                            // ---- ÖNEMLİ: bu, ceza eklenecek kullanıcının publicId'si —
+                            // ReporterUser'ın DEĞİL, şikayet edilen yorumun YAZARININ. ----
+                            publicId = r.TargetRating.User != null ? r.TargetRating.User.PublicId : null,
+                            comment = r.TargetRating.Comment,
+                            ratingValue = r.TargetRating.RatingValue,
+                            isDeleted = r.TargetRating.IsDeleted
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        // ---- YENİ: Rapor durumunu (Status/AdminNote/UserMessage) günceller.
+        // Report append-only DEĞİL — UserModerationAction'ın aksine, bir iş akışı
+        // durumu olduğu için var olan satır UPDATE edilir (Muhammed'in onayı). ----
+        [HttpPost]
+        public async Task<IActionResult> UpdateReportStatus([FromBody] UpdateReportStatusRequest req, [FromServices] AppDbContext db)
+        {
+            try
+            {
+                if (req == null || req.ReportId <= 0 || string.IsNullOrWhiteSpace(req.Status))
+                    return Json(new { error = "Geçersiz istek." });
+
+                var izinliDurumlar = new[] { "Beklemede", "İnceleniyor", "Çözüldü", "Reddedildi" };
+                if (!izinliDurumlar.Contains(req.Status))
+                    return Json(new { error = "Geçersiz durum." });
+
+                var report = await db.Reports.FindAsync(req.ReportId);
+                if (report == null)
+                    return Json(new { error = "Rapor bulunamadı. Sayfayı yenileyip tekrar deneyin." });
+
+                var adminIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!int.TryParse(adminIdClaim, out int adminId))
+                    return Json(new { error = "Admin kimliği doğrulanamadı. Lütfen tekrar giriş yapın." });
+
+                report.Status = req.Status;
+                report.AdminNote = string.IsNullOrWhiteSpace(req.AdminNote) ? null : req.AdminNote.Trim();
+                report.UserMessage = string.IsNullOrWhiteSpace(req.UserMessage) ? null : req.UserMessage.Trim();
+                report.ReviewedByAdminId = adminId;
+                report.ReviewedAt = DateTime.UtcNow;
+
+                await db.SaveChangesAsync();
+
+                return Json(new { success = true, id = report.Id });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        // ---- YENİ: RatingID ile tek bir yorumu getirir — ReportManagement'tan
+        // "Panel 2.1'de İncele" linkiyle CommentModeration'a derin bağlantı için.
+        // CommentModeration.cshtml/js'in mevcut arama akışına dokunmaz, sadece
+        // sayfa açılışında ek bir "pinlenmiş yorum" gösterimi besler. ----
+        [HttpGet]
+        public async Task<IActionResult> GetCommentByRatingId(int ratingId, [FromServices] AppDbContext db)
+        {
+            try
+            {
+                var r = await db.BookRatings
+                    .Include(x => x.Book)
+                    .Include(x => x.User)
+                    .Include(x => x.DeletedByAdmin)
+                    .FirstOrDefaultAsync(x => x.RatingID == ratingId);
+
+                if (r == null)
+                    return Json(new { found = false });
+
+                return Json(new
+                {
+                    found = true,
+                    comment = new
+                    {
+                        ratingId = r.RatingID,
+                        bookName = r.Book != null ? r.Book.BookName : null,
+                        bookCoverImageUrl = r.Book != null ? r.Book.BookCoverImage_URL : null,
+                        publicId = r.User != null ? r.User.PublicId : null,
+                        username = r.User != null ? r.User.Username : null,
+                        ratingValue = r.RatingValue,
+                        comment = r.Comment,
+                        createdAt = r.CreatedAt,
+                        isDeleted = r.IsDeleted,
+                        deletedAt = r.DeletedAt,
+                        deletedByAdminUsername = r.DeletedByAdmin != null ? r.DeletedByAdmin.Username : null,
+                        flaggedText = r.FlaggedText
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
         public IActionResult CommentModeration()
         {
             return View();
@@ -949,7 +1155,239 @@ namespace KitapTanitimSitesi.Controllers
         {
             return term.Replace("[", "[[]").Replace("%", "[%]").Replace("_", "[_]");
         }
+        public IActionResult UserManagement()
+        {
+            return View();
+        }
 
+        // ---- YENİ: "Aktif cezalı" kullanıcı listesi + arama.
+        // Arama (username/publicId) verilirse "aktif cezalı" filtresi bypass edilir —
+        // admin geçmişi olmayan ya da cezası bitmiş bir kullanıcıyı da arayabilmeli. ----
+        [HttpGet]
+        public async Task<IActionResult> SearchModeratedUsers(
+            [FromServices] AppDbContext db,
+            string? username,
+            string? publicId,
+            int page = 1)
+        {
+            try
+            {
+                if (page < 1) page = 1;
+                const int pageSize = 20;
+
+                var normalizedUsername = NormalizeSearchTerm(username);
+                var normalizedPublicId = NormalizeSearchTerm(publicId);
+                bool aramaVar = !string.IsNullOrEmpty(normalizedUsername) || !string.IsNullOrEmpty(normalizedPublicId);
+
+                IQueryable<User> userQuery = db.Users;
+
+                if (!string.IsNullOrEmpty(normalizedUsername))
+                {
+                    var pattern = $"%{EscapeLikeTerm(normalizedUsername)}%";
+                    userQuery = userQuery.Where(u => EF.Functions.Like(EF.Functions.Collate(u.Username, "Turkish_CI_AS"), pattern));
+                }
+                if (!string.IsNullOrEmpty(normalizedPublicId))
+                {
+                    userQuery = userQuery.Where(u => u.PublicId == normalizedPublicId);
+                }
+
+                // Her kullanıcının en son moderasyon satırını (varsa) tek sorguda çek
+                var joined = await userQuery
+                    .Select(u => new
+                    {
+                        u.Id,
+                        u.PublicId,
+                        u.Username,
+                        u.Email,
+                        LastAction = db.UserModerationActions
+                            .Where(a => a.UserID == u.Id)
+                            .OrderByDescending(a => a.CreatedAt)
+                            .Select(a => new { a.ActionType, a.EndDate, a.CreatedAt })
+                            .FirstOrDefault()
+                    })
+                    .ToListAsync();
+
+                // Arama modunda hiç filtre yok (geçmişi olmayan kullanıcı da dahil).
+                // Arama yoksa: sadece "aktif cezalı" (son satırın EndDate'i null/gelecek) kullanıcılar.
+                var suzulmus = aramaVar
+                    ? joined
+                    : joined.Where(x => x.LastAction != null &&
+                        (!x.LastAction.EndDate.HasValue || x.LastAction.EndDate.Value > DateTime.UtcNow));
+
+                var suzulmusListe = suzulmus
+                    .OrderByDescending(x => x.LastAction?.CreatedAt ?? DateTime.MinValue)
+                    .ToList();
+
+                var totalCount = suzulmusListe.Count;
+                var totalPages = totalCount == 0 ? 1 : (int)Math.Ceiling(totalCount / (double)pageSize);
+                if (page > totalPages) page = totalPages;
+
+                var pageItems = suzulmusListe
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(x => new
+                    {
+                        userId = x.Id,
+                        publicId = x.PublicId,
+                        username = x.Username,
+                        email = x.Email,
+                        lastActionType = x.LastAction?.ActionType,
+                        lastActionEndDate = x.LastAction?.EndDate,
+                        lastActionCreatedAt = x.LastAction?.CreatedAt,
+                        isActiveNow = x.LastAction != null &&
+                            (!x.LastAction.EndDate.HasValue || x.LastAction.EndDate.Value > DateTime.UtcNow)
+                    })
+                    .ToList();
+
+                return Json(new { users = pageItems, totalCount, totalPages, page, pageSize });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        // ---- YENİ: Bir kullanıcının TÜM moderasyon geçmişi, kronolojik sırayla.
+        // İlişkili bir yorum varsa (RelatedRatingID), yorumun kendisi + FlaggedText de
+        // birlikte döner — vurgulama (highlight) işlemi frontend'de (userManagement.js)
+        // FlaggedText'i satır satır ayırıp comment içinde arama/replace ile yapılır. ----
+        [HttpGet]
+        public async Task<IActionResult> GetUserModerationHistory(int userId, [FromServices] AppDbContext db)
+        {
+            try
+            {
+                var user = await db.Users.FindAsync(userId);
+                if (user == null)
+                    return Json(new { error = "Kullanıcı bulunamadı." });
+
+                var actions = await db.UserModerationActions
+                    .Where(a => a.UserID == userId)
+                    .Include(a => a.CreatedByAdmin)
+                    .Include(a => a.RelatedRating).ThenInclude(r => r.Book)
+                    .OrderBy(a => a.CreatedAt)
+                    .ToListAsync();
+
+                var result = actions.Select(a => new
+                {
+                    id = a.Id,
+                    actionType = a.ActionType,
+                    note = a.Note,
+                    startDate = a.StartDate,
+                    endDate = a.EndDate,
+                    createdAt = a.CreatedAt,
+                    createdByAdminUsername = a.CreatedByAdmin?.Username,
+                    relatedRating = a.RelatedRating == null ? null : new
+                    {
+                        ratingId = a.RelatedRating.RatingID,
+                        bookName = a.RelatedRating.Book?.BookName,
+                        comment = a.RelatedRating.Comment,
+                        flaggedText = a.RelatedRating.FlaggedText,
+                        isDeleted = a.RelatedRating.IsDeleted
+                    }
+                }).ToList();
+
+                var (isBanned, effectiveEndDate) = await GetTamBanDurumuAsync(db, userId);
+
+                return Json(new
+                {
+                    user = new { id = user.Id, publicId = user.PublicId, username = user.Username, email = user.Email },
+                    actions = result,
+                    isCurrentlyFullyBanned = isBanned,
+                    effectiveBanEndDate = effectiveEndDate
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        // ---- YENİ: Yeni bir moderasyon eylemi ekler (append-only — var olan satırlar
+        // hiçbir zaman güncellenmez). "YasakKaldırma" eylemi için EndDate her zaman
+        // sunucu tarafında "şimdi"ye zorlanır — böylece "son satırın EndDate'i
+        // null/gelecek mi" kuralı, kaldırma sonrası otomatik olarak "aktif değil"
+        // sonucunu üretir (client'ın doğru tarih göndermesine güvenmemek için). ----
+        [HttpPost]
+        public async Task<IActionResult> AddModerationAction([FromBody] AddModerationActionRequest req, [FromServices] AppDbContext db)
+        {
+            try
+            {
+                if (req == null || req.UserId <= 0 || string.IsNullOrWhiteSpace(req.ActionType))
+                    return Json(new { error = "Geçersiz istek." });
+
+                var izinliTipler = new[] { "Uyarı", "YorumYasağı", "TamBan", "YasakKaldırma", "YasakUzatma", "YasakKısaltma" };
+                if (!izinliTipler.Contains(req.ActionType))
+                    return Json(new { error = "Geçersiz eylem tipi." });
+
+                var user = await db.Users.FindAsync(req.UserId);
+                if (user == null)
+                    return Json(new { error = "Kullanıcı bulunamadı." });
+
+                if (req.RelatedRatingId.HasValue)
+                {
+                    var ratingExists = await db.BookRatings.AnyAsync(r => r.RatingID == req.RelatedRatingId.Value);
+                    if (!ratingExists)
+                        return Json(new { error = "İlişkilendirilmek istenen yorum bulunamadı." });
+                }
+
+                var adminIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!int.TryParse(adminIdClaim, out int adminId))
+                    return Json(new { error = "Admin kimliği doğrulanamadı. Lütfen tekrar giriş yapın." });
+
+                DateTime? endDate = req.ActionType == "YasakKaldırma" ? DateTime.UtcNow : req.EndDate;
+
+                var action = new UserModerationAction
+                {
+                    UserID = req.UserId,
+                    ActionType = req.ActionType,
+                    Note = string.IsNullOrWhiteSpace(req.Note) ? null : req.Note.Trim(),
+                    RelatedRatingID = req.RelatedRatingId,
+                    StartDate = req.StartDate,
+                    EndDate = endDate,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedByAdminId = adminId
+                };
+
+                db.UserModerationActions.Add(action);
+                await db.SaveChangesAsync();
+
+                return Json(new { success = true, id = action.Id });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        // ---- YENİ: Bir kullanıcının "gerçekten TamBan'lı mı" (login engeli için)
+        // durumunu hesaplar. Sadece TamBan/YorumYasağı/YasakKaldırma tipindeki en son
+        // satıra bakar; TamBan ise, ondan SONRA gelen bir YasakUzatma/YasakKısaltma
+        // varsa onun EndDate'ini esas alır. AccountController.cs'teki aynı isimli
+        // metotla kasıtlı olarak aynı mantığı taşır (izolasyon prensibi gereği
+        // paylaşılan bir servise çıkarılmadı, iki controller'da ayrı ayrı tutuluyor). ----
+        private static async Task<(bool isBanned, DateTime? effectiveEndDate)> GetTamBanDurumuAsync(AppDbContext db, int userId)
+        {
+            var baseAction = await db.UserModerationActions
+                .Where(a => a.UserID == userId &&
+                    (a.ActionType == "TamBan" || a.ActionType == "YorumYasağı" || a.ActionType == "YasakKaldırma"))
+                .OrderByDescending(a => a.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (baseAction == null || baseAction.ActionType != "TamBan")
+                return (false, null);
+
+            var laterAdjustment = await db.UserModerationActions
+                .Where(a => a.UserID == userId
+                    && a.CreatedAt > baseAction.CreatedAt
+                    && (a.ActionType == "YasakUzatma" || a.ActionType == "YasakKısaltma"))
+                .OrderByDescending(a => a.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            var effectiveEndDate = laterAdjustment?.EndDate ?? baseAction.EndDate;
+            var isActive = !effectiveEndDate.HasValue || effectiveEndDate.Value > DateTime.UtcNow;
+
+            return (isActive, effectiveEndDate);
+        }
     }
 
     // ---- YENİ EKLENEN REQUEST MODELİ ----
@@ -1018,5 +1456,14 @@ namespace KitapTanitimSitesi.Controllers
     {
         public int RatingId { get; set; }
         public string? FlaggedText { get; set; }
+    }
+    public class AddModerationActionRequest
+    {
+        public int UserId { get; set; }
+        public string ActionType { get; set; }
+        public string? Note { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public int? RelatedRatingId { get; set; }
     }
 }
