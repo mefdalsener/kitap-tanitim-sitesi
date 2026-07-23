@@ -11,6 +11,11 @@ let currentPage = 1;
 let totalPages = 1;
 let pendingDeleteRatingId = null;
 
+// ---- YENİ (Faz Ekstra 2.3): Report panelinden derin link desteği için.
+// Sayfa açılışı çağrılarından ÖNCE tanımlanmalı — aksi halde
+// "Cannot access 'pinliRatingId' before initialization" hatası oluşur. ----
+let pinliRatingId = null;
+
 // ---- Türkçe uyumlu Title Case ----
 function toTitleCase(text) {
 	if (!text) return text;
@@ -254,6 +259,7 @@ async function yorumSilOnayla() {
 		popupKapat('yorumSil');
 		showTopNotice('Yorum silindi.');
 		await yorumlariGetir(); // listeyi tazele
+		if (pinliRatingId === ratingId) await pinliYorumYukle(); // ---- YENİ: pinli kart açıksa onu da tazele ----
 	} catch (err) {
 		showTopNotice('Bağlantı hatası: ' + err.message, true);
 	} finally {
@@ -261,16 +267,10 @@ async function yorumSilOnayla() {
 	}
 }
 
-// ---- Sayfa açılışında: varsayılan filtrelerle (Tümü) ilk aramayı yap ----
-yorumlariGetir();
-pinliYorumKontrolEt();
-
 // ================================================================
 // YENİ (Faz Ekstra 2.3): Report panelinden derin link desteği.
 // Mevcut arama/silme akışına dokunmaz — ayrı bir "pinli yorum" kartını besler.
 // ================================================================
-
-let pinliRatingId = null;
 
 async function pinliYorumKontrolEt() {
 	const urlParams = new URLSearchParams(window.location.search);
@@ -342,3 +342,7 @@ function pinliYorumHtmlOlustur(c) {
 			<div class="comment-strip-actions">${silButonu}</div>
 		</div>`;
 }
+
+// ---- Sayfa açılışında: varsayılan filtrelerle (Tümü) ilk aramayı yap ----
+yorumlariGetir();
+pinliYorumKontrolEt();

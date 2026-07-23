@@ -129,6 +129,23 @@
 			}
 			else
 			{
+				<div class="bildirim-dropdown" id="bildirim-dropdown">
+					<button type="button" class="topbar-icon-btn" id="bildirim-toggle" title="Bildirimler">
+						<i class="fa-regular fa-bell"></i>
+						<span class="bildirim-rozet" id="bildirim-rozet" style="display:none;"></span>
+					</button>
+					<div class="bildirim-menu" id="bildirim-menu">
+						<div class="bildirim-menu-baslik">Bildirimler</div>
+						<div class="bildirim-liste" id="bildirim-liste">
+							<div class="bildirim-bos">Yükleniyor...</div>
+						</div>
+					</div>
+				</div>
+
+				<button type="button" class="topbar-icon-btn" id="talep-ac-btn" title="İstek/Şikayet" onclick="talepModalAc()">
+					<i class="fa-regular fa-envelope"></i>
+				</button>
+
 				<div class="kullanici-dropdown" id="kullanici-dropdown">
 					<span class="auth-btn auth-btn-ghost kullanici-toggle" id="kullanici-toggle">
 						@User.Identity.Name
@@ -477,24 +494,33 @@
 
 							@if (User.Identity != null && User.Identity.IsAuthenticated)
 							{
-								<div class="yorum-yaz-kutusu" id="yorum-yaz-kutusu">
-									<div class="yorum-yaz-baslik">Puanını ver, istersen yorumunu da yaz</div>
-									<div class="yorum-yildiz-secici" id="yorum-yildiz-secici">
-										<i class="fa-solid fa-star" data-yildiz="1"></i>
-										<i class="fa-solid fa-star" data-yildiz="2"></i>
-										<i class="fa-solid fa-star" data-yildiz="3"></i>
-										<i class="fa-solid fa-star" data-yildiz="4"></i>
-										<i class="fa-solid fa-star" data-yildiz="5"></i>
+								if (!string.IsNullOrEmpty(Model.AktifYorumYasagiMesaji))
+								{
+									<div class="yorum-giris-uyari yorum-yasagi-uyari">
+										<i class="fa-solid fa-triangle-exclamation"></i> @Model.AktifYorumYasagiMesaji
 									</div>
-									<textarea id="yorum-metin-alani" class="yorum-metin-alani" placeholder="Bu kitap hakkında ne düşünüyorsun? (opsiyonel)" maxlength="50000"></textarea>
-									<div class="yorum-yaz-alt">
-										<span class="yorum-uyari" id="yorum-uyari"></span>
-										<div class="yorum-yaz-butonlar">
-											<button type="button" class="yorum-kaldir-btn" id="yorum-kaldir-btn" onclick="yorumKaldir()" style="display:none;">Yorumu Kaldır ✕</button>
-											<button type="button" class="yorum-gonder-btn" id="yorum-gonder-btn" onclick="yorumGonder()">Yorum Yap</button>
+								}
+								else
+								{
+									<div class="yorum-yaz-kutusu" id="yorum-yaz-kutusu">
+										<div class="yorum-yaz-baslik">Puanını ver, istersen yorumunu da yaz</div>
+										<div class="yorum-yildiz-secici" id="yorum-yildiz-secici">
+											<i class="fa-solid fa-star" data-yildiz="1"></i>
+											<i class="fa-solid fa-star" data-yildiz="2"></i>
+											<i class="fa-solid fa-star" data-yildiz="3"></i>
+											<i class="fa-solid fa-star" data-yildiz="4"></i>
+											<i class="fa-solid fa-star" data-yildiz="5"></i>
+										</div>
+										<textarea id="yorum-metin-alani" class="yorum-metin-alani" placeholder="Bu kitap hakkında ne düşünüyorsun? (opsiyonel)" maxlength="50000"></textarea>
+										<div class="yorum-yaz-alt">
+											<span class="yorum-uyari" id="yorum-uyari"></span>
+											<div class="yorum-yaz-butonlar">
+												<button type="button" class="yorum-kaldir-btn" id="yorum-kaldir-btn" onclick="yorumKaldir()" style="display:none;">Yorumu Kaldır ✕</button>
+												<button type="button" class="yorum-gonder-btn" id="yorum-gonder-btn" onclick="yorumGonder()">Yorum Yap</button>
+											</div>
 										</div>
 									</div>
-								</div>
+								}
 							}
 							else
 							{
@@ -603,15 +629,47 @@
 					</div>
 
 				</div>
-
 			</div>
 		</div>
 	</div>
+
+	<!-- YENİ (Faz Ekstra 2.4): GENEL TALEP/ŞİKAYET MODALI -->
+	<div id="talep-modal-overlay" class="popup-overlay talep-modal-overlay" onclick="talepModalKapat()">
+		<div class="talep-modal" onclick="event.stopPropagation()">
+			<button class="popup-kapat" onclick="talepModalKapat()">✕</button>
+			<h3 class="talep-modal-baslik">İstek / Şikayet Gönder</h3>
+			<p class="talep-modal-aciklama">Bookland ile ilgili genel bir istek ya da şikayetini buradan iletebilirsin.</p>
+			<textarea id="talep-metin-alani" class="talep-metin-alani" maxlength="5000" placeholder="Mesajını yaz..."></textarea>
+			<div class="talep-modal-alt">
+				<span class="talep-uyari" id="talep-uyari"></span>
+				<button type="button" class="yorum-gonder-btn" id="talep-gonder-btn" onclick="talepGonder()">Gönder</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- YENİ (Faz Ekstra 2.4): YORUM ŞİKAYET MODALI -->
+	<div id="sikayet-modal-overlay" class="popup-overlay talep-modal-overlay" onclick="sikayetModalKapat()">
+		<div class="talep-modal" onclick="event.stopPropagation()">
+			<button class="popup-kapat" onclick="sikayetModalKapat()">✕</button>
+			<h3 class="talep-modal-baslik">Yorumu Şikayet Et</h3>
+			<p class="talep-modal-aciklama">Bu yorumu neden şikayet ediyorsun?</p>
+			<textarea id="sikayet-metin-alani" class="talep-metin-alani" maxlength="5000" placeholder="Kısaca açıkla..."></textarea>
+			<div class="talep-modal-alt">
+				<span class="talep-uyari" id="sikayet-uyari"></span>
+				<button type="button" class="yorum-gonder-btn" id="sikayet-gonder-btn" onclick="sikayetGonder()">Gönder</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- YENİ (Faz Ekstra 2.4): Toast bildirimi -->
+	<div id="toast-bildirim" class="toast-bildirim"></div>
+
 	<!-- Seri / ilgili kitap mantığı ve yazar->kitap ters ilişkisi için tüm kitapların özet verisi -->
 	<script id="tum-kitaplar-data" type="application/json">@Html.Raw(kitapVerileriJson)</script>
 	<script id="tum-yazarlar-data" type="application/json">@Html.Raw(yazarVerileriJson)</script>
 	<script id="kullanici-puanlari-data" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.KullaniciPuanlari))</script>
 	<script id="mevcut-kullanici-adi-data" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(User.Identity != null && User.Identity.IsAuthenticated ? User.Identity.Name : null))</script>
+	<script id="kullanici-silinen-yorum-kitap-idleri-data" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.KullaniciSilinenYorumKitapIdleri))</script>
 
 	<script src="~/js/bookland/bookland.js"></script>
 </body>

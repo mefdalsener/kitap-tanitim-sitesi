@@ -57,18 +57,66 @@ namespace KitapTanitimSitesi.Controllers
 
             // Giriş yapmışsa, kullanıcının şu ana kadar verdiği tüm puanları
             // tek sorguda çekip sözlüğe koyuyoruz (popup açılışında kullanılacak).
+            // Giriş yapmışsa, kullanıcının şu ana kadar verdiği tüm puanları
+            // tek sorguda çekip sözlüğe koyuyoruz (popup açılışında kullanılacak).
             if (User.Identity != null && User.Identity.IsAuthenticated)
             {
                 var userIdMetni = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (userIdMetni != null && int.TryParse(userIdMetni, out int userId))
                 {
+                    // ---- GÜNCELLENDİ (Faz Ekstra 2.4): !IsDeleted eklendi — silinmiş
+                    // bir yorum artık "sanki hiç var olmamış gibi" davranmalı, o yüzden
+                    // bu sözlüğe hiç girmemeli. ----
                     viewModel.KullaniciPuanlari = await _context.BookRatings
-                        .Where(br => br.UserID == userId)
+                        .Where(br => br.UserID == userId && !br.IsDeleted)
                         .ToDictionaryAsync(br => br.BookID, br => br.RatingValue);
+
+                    // ---- YENİ (Faz Ekstra 2.4) ----
+                    viewModel.KullaniciSilinenYorumKitapIdleri = (await _context.BookRatings
+                        .Where(br => br.UserID == userId && br.IsDeleted)
+                        .Select(br => br.BookID)
+                        .ToListAsync())
+                        .ToHashSet();
+
+                    viewModel.AktifYorumYasagiMesaji = await GetYorumYasagiMesajiAsync(userId);
                 }
             }
 
             return View("BooklandIndex", viewModel);
+        }
+
+        // ---- YENİ (Faz Ekstra 2.4): Kullanıcının aktif bir "YorumYasağı" cezası
+        // olup olmadığını hesaplar. AdminController.cs'teki GetTamBanDurumuAsync ile
+        // kasıtlı olarak aynı mantığı taşır (izolasyon prensibi gereği paylaşılan bir
+        // servise çıkarılmadı). Son ilgili satır TamBan ise null döner — TamBan zaten
+        // login'de engelleniyor, bu kullanıcı buraya hiç gelemez. ----
+        private async Task<string?> GetYorumYasagiMesajiAsync(int userId)
+        {
+            var baseAction = await _context.UserModerationActions
+                .Where(a => a.UserID == userId &&
+                    (a.ActionType == "TamBan" || a.ActionType == "YorumYasağı" || a.ActionType == "YasakKaldırma"))
+                .OrderByDescending(a => a.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (baseAction == null || baseAction.ActionType != "YorumYasağı")
+                return null;
+
+            var laterAdjustment = await _context.UserModerationActions
+                .Where(a => a.UserID == userId
+                    && a.CreatedAt > baseAction.CreatedAt
+                    && (a.ActionType == "YasakUzatma" || a.ActionType == "YasakKısaltma"))
+                .OrderByDescending(a => a.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            var effectiveEndDate = laterAdjustment?.EndDate ?? baseAction.EndDate;
+            var isActive = !effectiveEndDate.HasValue || effectiveEndDate.Value > DateTime.UtcNow;
+
+            if (!isActive)
+                return null;
+
+            return !effectiveEndDate.HasValue
+                ? "Yorum yazma yetkiniz süresiz olarak kısıtlanmıştır."
+                : $"Yorum yazma yetkiniz {effectiveEndDate.Value:dd.MM.yyyy HH:mm} tarihine kadar kısıtlanmıştır.";
         }
 
         // Kullanıcı popup'ta Yorumlar sekmesindeki yıldız seçiciyi kullanıp
@@ -101,14 +149,27 @@ namespace KitapTanitimSitesi.Controllers
                 return BadRequest("Puan 1 ile 5 arasında olmalı.");
             }
 
+            // ---- YENİ (Faz Ekstra 2.4): Aktif YorumYasağı varsa gönderim tamamen
+            // reddedilir (yıldız dahil) — arayüzdeki form zaten disable olacak,
+            // bu sadece sunucu tarafı güvenlik katmanı. ----
+            var yorumYasagiMesaji = await GetYorumYasagiMesajiAsync(userId);
+            if (yorumYasagiMesaji != null)
+            {
+                return StatusCode(403, new { error = yorumYasagiMesaji });
+            }
+
             var kitap = await _context.Books.FirstOrDefaultAsync(b => b.BookID == istek.BookId);
             if (kitap == null)
             {
                 return NotFound();
             }
 
+            // ---- GÜNCELLENDİ (Faz Ekstra 2.4): !IsDeleted eklendi — silinmiş bir
+            // yorumun üzerine yazılamaz, aynı kitaba yeni bir yorum atılmak
+            // istenirse bu tamamen yeni bir satır olarak açılır (filtrelenmiş
+            // unique index bunu destekliyor: HasFilter("[IsDeleted] = 0")). ----
             var mevcutPuan = await _context.BookRatings
-                .FirstOrDefaultAsync(br => br.BookID == istek.BookId && br.UserID == userId);
+                .FirstOrDefaultAsync(br => br.BookID == istek.BookId && br.UserID == userId && !br.IsDeleted);
 
             string? yorumMetni;
 
@@ -132,18 +193,20 @@ namespace KitapTanitimSitesi.Controllers
                     RatingValue = (byte)istek.Puan,
                     Comment = yeniYorum
                 });
-                kitap.RatingCount = (kitap.RatingCount ?? 0) + 1;
                 yorumMetni = yeniYorum;
             }
 
             await _context.SaveChangesAsync();
 
-            // Ortalamayı bu kitaba ait tüm puanlar üzerinden yeniden hesapla.
+            // ---- GÜNCELLENDİ (Faz Ekstra 2.4): Ortalama VE sayaç artık sadece
+            // silinmemiş satırlar üzerinden, tek sorgudan hesaplanıyor — silinmiş
+            // bir yorum "sanki hiç var olmamış gibi" davranıyor. ----
             var tumPuanlar = await _context.BookRatings
-                .Where(br => br.BookID == istek.BookId)
+                .Where(br => br.BookID == istek.BookId && !br.IsDeleted)
                 .Select(br => (int)br.RatingValue)
                 .ToListAsync();
 
+            kitap.RatingCount = tumPuanlar.Count;
             kitap.AverageRating = tumPuanlar.Count > 0
                 ? Math.Round((decimal)tumPuanlar.Average(), 1)
                 : 0;
@@ -213,8 +276,10 @@ namespace KitapTanitimSitesi.Controllers
                 return NotFound();
             }
 
+            // ---- GÜNCELLENDİ (Faz Ekstra 2.4): !IsDeleted eklendi — silinmiş bir
+            // yorum bulunamaz, kullanıcı onu kaldıramaz. ----
             var mevcutPuan = await _context.BookRatings
-                .FirstOrDefaultAsync(br => br.BookID == istek.BookId && br.UserID == userId);
+                .FirstOrDefaultAsync(br => br.BookID == istek.BookId && br.UserID == userId && !br.IsDeleted);
 
             if (mevcutPuan == null)
             {
@@ -222,14 +287,15 @@ namespace KitapTanitimSitesi.Controllers
             }
 
             _context.BookRatings.Remove(mevcutPuan);
-            kitap.RatingCount = Math.Max(0, (kitap.RatingCount ?? 0) - 1);
             await _context.SaveChangesAsync();
 
+            // ---- GÜNCELLENDİ (Faz Ekstra 2.4): PuanVer ile aynı tutarlı hesaplama ----
             var tumPuanlar = await _context.BookRatings
-                .Where(br => br.BookID == istek.BookId)
+                .Where(br => br.BookID == istek.BookId && !br.IsDeleted)
                 .Select(br => (int)br.RatingValue)
                 .ToListAsync();
 
+            kitap.RatingCount = tumPuanlar.Count;
             kitap.AverageRating = tumPuanlar.Count > 0
                 ? Math.Round((decimal)tumPuanlar.Average(), 1)
                 : 0;
@@ -242,6 +308,120 @@ namespace KitapTanitimSitesi.Controllers
                 averageRating = kitap.AverageRating,
                 ratingCount = kitap.RatingCount ?? 0
             });
+        }
+
+        // ---- YENİ (Faz Ekstra 2.4) ----
+
+        // Kitap popup'ındaki "Yorumlar" sekmesinde bir yoruma tıklanan şikayet
+        // ikonu bunu çağırır. Kullanıcı kendi yorumunu şikayet edemez.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SikayetEt([FromBody] SikayetRequest istek)
+        {
+            if (User.Identity == null || !User.Identity.IsAuthenticated)
+            {
+                return Unauthorized();
+            }
+
+            var userIdMetni = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userIdMetni == null || !int.TryParse(userIdMetni, out int userId))
+            {
+                return Unauthorized();
+            }
+
+            if (istek == null || istek.RatingId <= 0 || string.IsNullOrWhiteSpace(istek.Mesaj))
+            {
+                return BadRequest("Şikayet mesajı boş olamaz.");
+            }
+
+            var hedefYorum = await _context.BookRatings
+                .FirstOrDefaultAsync(br => br.RatingID == istek.RatingId && !br.IsDeleted);
+            if (hedefYorum == null)
+            {
+                return NotFound();
+            }
+
+            if (hedefYorum.UserID == userId)
+            {
+                return BadRequest("Kendi yorumunuzu şikayet edemezsiniz.");
+            }
+
+            _context.Reports.Add(new Report
+            {
+                Type = "Şikayet",
+                TargetRatingID = istek.RatingId,
+                ReporterUserID = userId,
+                Message = istek.Mesaj.Trim()
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
+        // Zarf ikonundan açılan genel talep/şikayet modalı bunu çağırır.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> TalepOlustur([FromBody] TalepRequest istek)
+        {
+            if (User.Identity == null || !User.Identity.IsAuthenticated)
+            {
+                return Unauthorized();
+            }
+
+            var userIdMetni = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userIdMetni == null || !int.TryParse(userIdMetni, out int userId))
+            {
+                return Unauthorized();
+            }
+
+            if (istek == null || string.IsNullOrWhiteSpace(istek.Mesaj))
+            {
+                return BadRequest("Talep mesajı boş olamaz.");
+            }
+
+            _context.Reports.Add(new Report
+            {
+                Type = "Talep",
+                TargetRatingID = null,
+                ReporterUserID = userId,
+                Message = istek.Mesaj.Trim()
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
+        // Çan ikonundan açılan bildirim dropdown'ı bunu çağırır. Seen/unseen
+        // takibi yok (5 numaralı karar) — kullanıcının tüm silinmiş yorumları
+        // her seferinde listelenir.
+        [HttpGet]
+        public async Task<IActionResult> GetBildirimler()
+        {
+            if (User.Identity == null || !User.Identity.IsAuthenticated)
+            {
+                return Unauthorized();
+            }
+
+            var userIdMetni = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userIdMetni == null || !int.TryParse(userIdMetni, out int userId))
+            {
+                return Unauthorized();
+            }
+
+            var silinenler = await _context.BookRatings
+                .Where(br => br.UserID == userId && br.IsDeleted)
+                .Include(br => br.Book)
+                .OrderByDescending(br => br.DeletedAt)
+                .Select(br => new
+                {
+                    bookName = br.Book != null ? br.Book.BookName : null,
+                    deletedAt = br.DeletedAt
+                })
+                .ToListAsync();
+
+            return Json(new { bildirimler = silinenler });
         }
 
         public class PuanKaldirRequest
@@ -258,6 +438,18 @@ namespace KitapTanitimSitesi.Controllers
             // Boş gönderilirse (kullanıcı sadece puanını değiştiriyorsa) eski
             // yorum korunur, üzerine yazılmaz.
             public string? Yorum { get; set; }
+        }
+
+        // ---- YENİ (Faz Ekstra 2.4) ----
+        public class SikayetRequest
+        {
+            public int RatingId { get; set; }
+            public string Mesaj { get; set; } = string.Empty;
+        }
+
+        public class TalepRequest
+        {
+            public string Mesaj { get; set; } = string.Empty;
         }
     }
 }

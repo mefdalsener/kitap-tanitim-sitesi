@@ -1126,6 +1126,27 @@ namespace KitapTanitimSitesi.Controllers
 
                 await db.SaveChangesAsync();
 
+                // ---- YENİ (Faz Ekstra 2.4): Silinen yorumun puanı artık ortalamaya/
+                // sayaca dahil olmamalı ("sanki hiç var olmamış gibi") — Bookland
+                // tarafındaki PuanVer/PuanKaldir'daki aynı hesaplama burada tekrarlanıyor,
+                // aksi hâlde admin silene kadar kitabın ortalaması bir sonraki
+                // puan verme/kaldırma işlemine kadar güncellenmemiş kalırdı. ----
+                var kitap = await db.Books.FirstOrDefaultAsync(b => b.BookID == rating.BookID);
+                if (kitap != null)
+                {
+                    var tumPuanlar = await db.BookRatings
+                        .Where(br => br.BookID == rating.BookID && !br.IsDeleted)
+                        .Select(br => (int)br.RatingValue)
+                        .ToListAsync();
+
+                    kitap.RatingCount = tumPuanlar.Count;
+                    kitap.AverageRating = tumPuanlar.Count > 0
+                        ? Math.Round((decimal)tumPuanlar.Average(), 1)
+                        : 0;
+
+                    await db.SaveChangesAsync();
+                }
+
                 return Json(new
                 {
                     success = true,

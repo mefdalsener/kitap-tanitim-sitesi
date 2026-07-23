@@ -14,5 +14,15 @@
         // kendi verdiği puanlar: BookID -> RatingValue (1-5). Popup açılışında
         // ilgili kitabın yıldızlarını doğru sarıya boyamak için kullanılır.
         public Dictionary<int, byte> KullaniciPuanlari { get; set; } = new Dictionary<int, byte>();
+
+        // ---- YENİ (Faz Ekstra 2.4) ----
+        // Kullanıcının kendi yorumlarından hangileri admin tarafından silinmiş
+        // (BookID listesi). "Puanlarım ve Yorumlarım" sekmesinde bu kitaplar
+        // "silindi" rozetiyle gösterilir, düzenleme/kaldırma butonları kapatılır.
+        public HashSet<int> KullaniciSilinenYorumKitapIdleri { get; set; } = new HashSet<int>();
+
+        // Giriş yapmış kullanıcının aktif bir "YorumYasağı" cezası varsa, yorum
+        // yazma formunun yerine gösterilecek mesaj. null ise yasak yok, form açık.
+        public string? AktifYorumYasagiMesaji { get; set; }
     }
 }

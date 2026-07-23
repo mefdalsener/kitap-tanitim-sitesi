@@ -39,6 +39,14 @@ const mevcutKullaniciAdi = JSON.parse(
     document.getElementById("mevcut-kullanici-adi-data").textContent,
 );
 
+// ---- YENİ (Faz Ekstra 2.4) ----
+// Giriş yapmış kullanıcının, admin tarafından silinmiş yorumlarının ait
+// olduğu kitap ID'leri. "Puanlarım" kartlarında/popup'ında "silindi"
+// rozetini göstermek ve düzenleme/kaldırmayı engellemek için kullanılır.
+const silinenYorumKitapIdleri = new Set(
+    JSON.parse(document.getElementById("kullanici-silinen-yorum-kitap-idleri-data")?.textContent || "[]"),
+);
+
 // --- URL / QUERY STRING DURUM YÖNETİMİ ---
 // Tüm filtreler, arama, aktif görünüm ve açık popup'lar URL'nin query
 // string'inde tutulur. Böylece adres çubuğundaki her durum paylaşılabilir
@@ -175,6 +183,201 @@ if (kullaniciDropdown) {
             kullaniciDropdown.classList.remove("acik");
         }
     });
+}
+
+// ---- YENİ (Faz Ekstra 2.4): Bildirim (çan) dropdown'ı — kullanici-dropdown
+// ile aynı vanilla-JS "acik" class deseni tekrar kullanıldı. ----
+const bildirimDropdown = document.getElementById("bildirim-dropdown");
+if (bildirimDropdown) {
+    const bildirimToggle = document.getElementById("bildirim-toggle");
+
+    bildirimToggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        bildirimDropdown.classList.toggle("acik");
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!bildirimDropdown.contains(e.target)) {
+            bildirimDropdown.classList.remove("acik");
+        }
+    });
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            bildirimDropdown.classList.remove("acik");
+        }
+    });
+
+    bildirimlerYukle();
+}
+
+// Bildirim listesini backend'den çeker (seen/unseen takibi yok — her açılışta
+// kullanıcının TÜM silinmiş yorumları listelenir, rozet sayısı = toplam sayı).
+async function bildirimlerYukle() {
+    const liste = document.getElementById("bildirim-liste");
+    const rozet = document.getElementById("bildirim-rozet");
+    if (!liste) return;
+
+    try {
+        const yanit = await fetch("/Bookland/GetBildirimler");
+        if (!yanit.ok) {
+            liste.innerHTML = '<div class="bildirim-bos">Bildirimler yüklenemedi.</div>';
+            return;
+        }
+
+        const sonuc = await yanit.json();
+        const bildirimler = Array.isArray(sonuc.bildirimler) ? sonuc.bildirimler : [];
+
+        if (bildirimler.length === 0) {
+            liste.innerHTML = '<div class="bildirim-bos">Henüz bir bildirimin yok.</div>';
+            if (rozet) rozet.style.display = "none";
+            return;
+        }
+
+        if (rozet) {
+            rozet.textContent = bildirimler.length;
+            rozet.style.display = "inline-flex";
+        }
+
+        liste.innerHTML = "";
+        bildirimler.forEach((b) => {
+            const oge = document.createElement("div");
+            oge.className = "bildirim-ogesi";
+            const tarih = b.deletedAt ? new Date(b.deletedAt).toLocaleDateString("tr-TR") : "";
+            oge.innerHTML = `
+				<i class="fa-solid fa-triangle-exclamation bildirim-ikon"></i>
+				<div class="bildirim-metin">
+					<strong>${b.bookName || "Bir kitap"}</strong> için yaptığın yorum topluluk kurallarına uymadığı için silinmiştir.
+					<span class="bildirim-tarih">${tarih}</span>
+				</div>`;
+            liste.appendChild(oge);
+        });
+    } catch (hata) {
+        liste.innerHTML = '<div class="bildirim-bos">Bildirimler yüklenemedi.</div>';
+    }
+}
+
+// ---- YENİ (Faz Ekstra 2.4): Genel talep/şikayet modalı (zarf ikonu) ----
+function talepModalAc() {
+    document.getElementById("talep-metin-alani").value = "";
+    const uyari = document.getElementById("talep-uyari");
+    uyari.textContent = "";
+    uyari.classList.remove("basarili");
+    document.getElementById("talep-modal-overlay").classList.add("aktif");
+    document.body.style.overflow = "hidden";
+}
+
+function talepModalKapat() {
+    document.getElementById("talep-modal-overlay").classList.remove("aktif");
+    document.body.style.overflow = "";
+}
+
+async function talepGonder() {
+    const metinAlani = document.getElementById("talep-metin-alani");
+    const uyari = document.getElementById("talep-uyari");
+    const btn = document.getElementById("talep-gonder-btn");
+    const metin = metinAlani.value.trim();
+
+    if (!metin) {
+        uyari.textContent = "Mesajını yazmalısın.";
+        return;
+    }
+
+    uyari.textContent = "";
+    btn.disabled = true;
+
+    try {
+        const csrfToken = document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content");
+
+        const yanit = await fetch("/Bookland/TalepOlustur", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": csrfToken || "" },
+            body: JSON.stringify({ mesaj: metin }),
+        });
+
+        if (!yanit.ok) {
+            uyari.textContent = "Gönderilemedi, tekrar dene.";
+            return;
+        }
+
+        talepModalKapat();
+        toastGoster("Talebin alındı, teşekkürler!");
+    } catch (hata) {
+        uyari.textContent = "Gönderilemedi, tekrar dene.";
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// ---- YENİ (Faz Ekstra 2.4): Yorum şikayet modalı ----
+let sikayetHedefRatingId = null;
+
+function sikayetModalAc(ratingId) {
+    sikayetHedefRatingId = ratingId;
+    document.getElementById("sikayet-metin-alani").value = "";
+    document.getElementById("sikayet-uyari").textContent = "";
+    document.getElementById("sikayet-modal-overlay").classList.add("aktif");
+    document.body.style.overflow = "hidden";
+}
+
+function sikayetModalKapat() {
+    document.getElementById("sikayet-modal-overlay").classList.remove("aktif");
+    document.body.style.overflow = "";
+    sikayetHedefRatingId = null;
+}
+
+async function sikayetGonder() {
+    if (!sikayetHedefRatingId) return;
+
+    const metinAlani = document.getElementById("sikayet-metin-alani");
+    const uyari = document.getElementById("sikayet-uyari");
+    const btn = document.getElementById("sikayet-gonder-btn");
+    const metin = metinAlani.value.trim();
+
+    if (!metin) {
+        uyari.textContent = "Şikayet nedenini yazmalısın.";
+        return;
+    }
+
+    uyari.textContent = "";
+    btn.disabled = true;
+
+    try {
+        const csrfToken = document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content");
+
+        const yanit = await fetch("/Bookland/SikayetEt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": csrfToken || "" },
+            body: JSON.stringify({ ratingId: sikayetHedefRatingId, mesaj: metin }),
+        });
+
+        if (!yanit.ok) {
+            uyari.textContent = "Gönderilemedi, tekrar dene.";
+            return;
+        }
+
+        sikayetModalKapat();
+        toastGoster("Şikayetin alındı, teşekkürler!");
+    } catch (hata) {
+        uyari.textContent = "Gönderilemedi, tekrar dene.";
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// ---- YENİ (Faz Ekstra 2.4): Basit toast bildirimi ----
+let toastZamanlayici = null;
+function toastGoster(mesaj) {
+    const toast = document.getElementById("toast-bildirim");
+    if (!toast) return;
+    toast.textContent = mesaj;
+    toast.classList.add("goster");
+    clearTimeout(toastZamanlayici);
+    toastZamanlayici = setTimeout(() => toast.classList.remove("goster"), 3000);
 }
 
 function toggleFilter(ad) {
@@ -1015,12 +1218,29 @@ function yorumKartiOlustur(yorum) {
     const kendisiMi = mevcutKullaniciAdi && yorum.kullaniciAdi === mevcutKullaniciAdi;
     kullanici.textContent = (yorum.kullaniciAdi || "Kullanıcı") + (kendisiMi ? " (sen)" : "");
 
+    // ---- YENİ (Faz Ekstra 2.4): tarih + şikayet ikonu birlikte sağda dursun
+    // diye ortak bir grup içine alındı (justify-content:space-between iki
+    // öge bekliyor, üç öge farklı dağılır). ----
+    const sagGrup = document.createElement("div");
+    sagGrup.className = "yorum-karti-sag-grup";
+
     const tarih = document.createElement("span");
     tarih.className = "yorum-tarih";
     tarih.textContent = yorum.tarih || "";
+    sagGrup.appendChild(tarih);
+
+    if (!kendisiMi && yorum.ratingId) {
+        const sikayetBtn = document.createElement("button");
+        sikayetBtn.type = "button";
+        sikayetBtn.className = "yorum-sikayet-btn";
+        sikayetBtn.title = "Bu yorumu şikayet et";
+        sikayetBtn.innerHTML = '<i class="fa-regular fa-flag"></i>';
+        sikayetBtn.onclick = () => sikayetModalAc(yorum.ratingId);
+        sagGrup.appendChild(sikayetBtn);
+    }
 
     ustSatir.appendChild(kullanici);
-    ustSatir.appendChild(tarih);
+    ustSatir.appendChild(sagGrup);
     kart.appendChild(ustSatir);
 
     const yildizSatiri = document.createElement("div");
@@ -1050,8 +1270,6 @@ function yorumKartiOlustur(yorum) {
 
         kart.appendChild(sarmalayici);
 
-        // Metin 4 satırı doldurmuyorsa "daha fazla göster" gereksiz;
-        // kart DOM'a eklendikten sonraki karede gerçek taşma ölçülüyor.
         requestAnimationFrame(() => {
             if (metin.scrollHeight <= metin.clientHeight + 1) {
                 buton.style.display = "none";
@@ -1299,11 +1517,21 @@ function puanlarimKartiYorumGuncelle(kitap) {
     const eskiDevami = sarmalayici.querySelector(".puan-karti-devami");
     if (eskiDevami) eskiDevami.remove();
 
+    // ---- YENİ (Faz Ekstra 2.4): silinmiş yorum artık public GetYorumlar
+    // listesinde hiç görünmüyor (backend'de filtrelendi), o yüzden "silindi"
+    // durumu sayfa yüklenirken gelen silinenYorumKitapIdleri'nden okunuyor. ----
+    if (silinenYorumKitapIdleri.has(Number(kitap.id))) {
+        p.textContent = "Bu yorum topluluk kurallarına uymadığı için silinmiştir.";
+        p.classList.remove("kisaltilmis", "puan-karti-yorum-bos");
+        p.classList.add("puan-karti-yorum-silindi");
+        return;
+    }
+
     const kendiYorum = kullaniciYorumunuBul(kitap);
 
     if (kendiYorum && kendiYorum.yorum) {
         p.textContent = kendiYorum.yorum;
-        p.classList.remove("puan-karti-yorum-bos");
+        p.classList.remove("puan-karti-yorum-bos", "puan-karti-yorum-silindi");
         p.classList.add("kisaltilmis");
 
         requestAnimationFrame(() => {
@@ -1316,7 +1544,7 @@ function puanlarimKartiYorumGuncelle(kitap) {
         });
     } else {
         p.textContent = "Sadece puan verildi, yorum yazılmadı.";
-        p.classList.remove("kisaltilmis");
+        p.classList.remove("kisaltilmis", "puan-karti-yorum-silindi");
         p.classList.add("puan-karti-yorum-bos");
     }
 }
@@ -1384,6 +1612,14 @@ async function puanlarimPopupAc(kitap, push) {
     document.getElementById("puanlarim-popup-yorum-metin").textContent = "Yükleniyor...";
     document.getElementById("puanlarim-popup-yorum-duzenle").value = "";
 
+    // ---- YENİ (Faz Ekstra 2.4): silinmiş yorumda düzenle/sil butonları
+    // tamamen kapatılır. ----
+    const silindiMi = silinenYorumKitapIdleri.has(Number(kitap.id));
+    const duzenleBtn = document.getElementById("puanlarim-duzenle-btn");
+    const silBtn = document.getElementById("puanlarim-sil-btn");
+    if (duzenleBtn) duzenleBtn.disabled = silindiMi;
+    if (silBtn) silBtn.disabled = silindiMi;
+
     document.getElementById("puanlarim-popup-overlay").classList.add("aktif");
     document.body.style.overflow = "hidden";
     document.getElementById("puanlarim-popup-govde").scrollTop = 0;
@@ -1392,8 +1628,14 @@ async function puanlarimPopupAc(kitap, push) {
         urlGuncelle({ puanKitapId: kitap.id, bookId: null, authorId: null });
     }
 
+    if (silindiMi) {
+        document.getElementById("puanlarim-popup-yorum-metin").textContent =
+            "Bu yorum topluluk kurallarına uymadığı için silinmiştir.";
+        return;
+    }
+
     await yorumlariYukle(kitap.id);
-    if (aktifPuanlarimKitapId !== kitap.id) return; // bu sırada popup kapanıp başka kitap açılmış olabilir
+    if (aktifPuanlarimKitapId !== kitap.id) return;
 
     const kendiYorum = kullaniciYorumunuBul(kitap);
     const metin = kendiYorum && kendiYorum.yorum ? kendiYorum.yorum : "";
