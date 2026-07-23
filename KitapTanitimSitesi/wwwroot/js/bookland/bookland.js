@@ -1234,7 +1234,7 @@ function yorumKartiOlustur(yorum) {
         sikayetBtn.type = "button";
         sikayetBtn.className = "yorum-sikayet-btn";
         sikayetBtn.title = "Bu yorumu şikayet et";
-        sikayetBtn.innerHTML = '<i class="fa-regular fa-flag"></i>';
+        sikayetBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
         sikayetBtn.onclick = () => sikayetModalAc(yorum.ratingId);
         sagGrup.appendChild(sikayetBtn);
     }

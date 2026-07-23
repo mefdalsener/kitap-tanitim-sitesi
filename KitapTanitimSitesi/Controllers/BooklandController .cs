@@ -229,14 +229,16 @@ namespace KitapTanitimSitesi.Controllers
         // döndürür (yorumsuz salt puanlar burada listelenmez, onlar sadece
         // ortalamaya katkı sağlar), en yeni yorum en üstte.
         [HttpGet]
+        [HttpGet]
         public async Task<IActionResult> GetYorumlar(int bookId)
         {
             var yorumlar = await _context.BookRatings
-                .Where(br => br.BookID == bookId && br.Comment != null && br.Comment != "")
+                .Where(br => br.BookID == bookId && br.Comment != null && br.Comment != "" && !br.IsDeleted)
                 .Include(br => br.User)
                 .OrderByDescending(br => br.CreatedAt)
                 .Select(br => new
                 {
+                    ratingId = br.RatingID,
                     kullaniciAdi = br.User != null ? br.User.Username : "Kullanıcı",
                     tarih = br.CreatedAt.ToString("dd.MM.yyyy"),
                     puan = br.RatingValue,
